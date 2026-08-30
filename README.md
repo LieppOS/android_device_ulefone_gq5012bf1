@@ -1584,4 +1584,14 @@ Recovery then traversed the real device-encrypted userdata tree.
 
 This proves that the remaining automatic `/data` mount blocker is SELinux policy/context for the MediaTek recovery BootControl HAL. Global permissive mode is diagnostic only and is not an acceptable permanent solution.
 
+### Build17 BootControl misc-device labeling proof
+
+The physical `misc` partition is `/dev/block/sdc1`, with `/dev/block/by-name/misc` pointing to it. Recovery originally labels both as generic `u:object_r:block_device:s0`.
+
+The SELinux policy contains the standard `misc_block_device` type. In a live test, `/dev/block/sdc1` was relabeled to `u:object_r:misc_block_device:s0`, SELinux was returned to enforcing, and only `vendor.boot-default` was restarted.
+
+After this relabel, the restarted `hal_bootctl_default` process no longer produced the repeated generic `block_device` AVCs for `/dev/block/sdc1`. This confirms that the physical misc block node must receive the `misc_block_device` label in recovery.
+
+One enforcing denial remains for `hal_bootctl_default` reading the recovery rootfs `/bin` directory. BootControl interface registration under this remaining denial still requires explicit verification before adding policy.
+
 <!-- DT-SECURITY-STACK-END -->
