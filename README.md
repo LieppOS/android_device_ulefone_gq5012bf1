@@ -1215,4 +1215,28 @@ The stock storage-proxy init path also changes `/dev/0:0:0:49476` owner to `syst
 
 A live recovery test changed only `/dev/tkcore_admin` to the stock `system:system 0600` ownership/mode. After that change, stock `teed` no longer exited immediately with status 253 and no longer logged `error opening [/dev/tkcore_admin]: Permission denied(13)`; it remained running in the foreground for more than six minutes until manually interrupted. This verifies that recovery device-node ownership was the first `teed` startup blocker. TrustKernel ready state and downstream KeyMint/Keystore2 operation still require separate validation.
 
+### Live recovery security-stack milestone
+
+A live OrangeFox recovery session confirmed the recovery splash deadlock can be removed without changing the kernel or DTB.
+
+After restoring the stock TrustKernel device-node ownership/modes, `teed` stays alive and reports:
+
+```text
+vendor.trustkernel.log.state=ready
+vendor.trustkernel.ready=true
+```
+
+The stock TrustKernel KeyMint V3 service then opens its TEE session successfully and registers the device AIDL services:
+
+```text
+android.hardware.security.keymint.IKeyMintDevice/default
+android.hardware.security.secureclock.ISecureClock/default
+android.hardware.security.sharedsecret.ISharedSecret/default
+android.hardware.security.keymint.IRemotelyProvisionedComponent/default
+```
+
+With a recovery-compatible framework VINTF declaration and working `logd` task profiles, `keystore2` remains alive and reports `Successfully registered Keystore 2.0 service.` Recovery subsequently leaves its previous crypto wait and the OrangeFox UI becomes usable.
+
+This does not yet mean userdata decryption works. The same session still has no `/dev/block/mapper/userdata`. TrustKernel reports the recovery environment/device as unverified, KeyMint commands fail with `0xffff000f`, Keystore2 reports `SECURE_HW_COMMUNICATION_FAILED`, and recovery logs `decryptWithKeystoreKey failed`. Thus the UI/splash blocker and userdata-decryption blocker are now proven to be separate stages.
+
 <!-- DT-SECURITY-STACK-END -->
