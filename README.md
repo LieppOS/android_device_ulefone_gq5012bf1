@@ -1141,4 +1141,14 @@ ELF inspection confirms that `teed`, the TrustKernel KeyMint service, and the Tr
 
 `mtk_storageproxyd` instead depends on `libisetrusty.so` and its stock command line targets `/dev/trusty-ipc-dev1`. No `trusty-ipc-dev*` node is present during recovery boot, so it is not currently treated as a prerequisite for the TrustKernel KeyMint bring-up path.
 
+### Recovery security bring-up observations
+
+Live recovery testing confirms that the stock TrustKernel KeyMint V3 executable can remain running and opens `/dev/binderfs/binder` plus `/dev/tkcore_client`; this does not yet prove successful AIDL service registration.
+
+Manual stock `teed` startup exits with status `253`. The kernel repeatedly reports `teed not ready. id=0x1003` and failure to load TA `9ef77781-7bd5-4e39-965f20f6f211f400` with `0xffff0000`, even though the matching TA exists in `/vendor/app/t6`.
+
+Recovery `keystore2` still crash-loops with `SIGABRT`; its PID changes across the nominal `running` state. During each startup, `servicemanager` also reports missing `/system/etc/vintf/manifest.xml` and a `NULL VINTF MANIFEST`.
+
+These are confirmed recovery bring-up blockers; metadata-key unwrap and creation of `/dev/block/mapper/userdata` have not yet succeeded.
+
 <!-- DT-SECURITY-STACK-END -->
