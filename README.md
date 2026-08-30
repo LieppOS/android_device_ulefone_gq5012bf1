@@ -1464,4 +1464,20 @@ The metadata KeyMint blob is 565 bytes with SHA256 `1eac61edfe777d0c6fa2f2d4f62e
 
 Late mounting `/vendor` does not by itself populate the missing vendor properties in the already-running recovery property service. Whether these missing/version-mismatched REE inputs cause `INVALID_KEY_BLOB` remains to be tested.
 
+### TrustKernel KeyMint version-property inputs
+
+Static inspection of the stock TrustKernel KeyMint V3 service confirms direct references to:
+
+```text
+ro.build.version.release
+ro.build.version.security_patch
+ro.vendor.build.security_patch
+```
+
+The active Android system mounted from `system_a` currently reports Android 16 / SDK 36 with `ro.build.version.security_patch=2026-06-01`, while the stock vendor image reports Android 14 / SDK 34 with `ro.vendor.build.security_patch=2025-09-05`.
+
+Build17 recovery currently exposes Android 14 / SDK 34 with `ro.build.version.security_patch=2024-09-05`, while `ro.vendor.build.security_patch` is unset because `/vendor` is mounted after recovery property initialization.
+
+This makes REE OS/security-patch identity a concrete candidate for the remaining metadata KeyMint `INVALID_KEY_BLOB` failure.
+
 <!-- DT-SECURITY-STACK-END -->
