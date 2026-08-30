@@ -1071,4 +1071,41 @@ Stock Android metadata encryption creates:
 and mounts that device as F2FS on `/data`.
 
 This confirms that recovery FBE support must interoperate with the device TrustKernel/KeyMint backend rather than relying only on generic Keymaster compatibility libraries.
+### TrustKernel startup details
+
+Stock Android runtime additionally verifies:
+
+```text
+ro.vendor.mtk_trustkernel_tee_support=1
+vendor.trustkernel.ready=true
+vendor.trustkernel.fs.mode=3
+vendor.trustkernel.fs.state=ready
+```
+
+For FBE (`ro.crypto.type=file`, `ro.crypto.state=encrypted`), `trustkernel.rc` selects TrustKernel filesystem mode 3.
+
+The stock init definitions are:
+
+```text
+vendor.keymint-3-0-trustkernel
+  /vendor/bin/hw/android.hardware.security.keymint@3.0-service.trustkernel
+  class early_hal
+  user/group system
+
+vendor.gatekeeper
+  /vendor/bin/hw/android.hardware.gatekeeper-service.trustkernel
+  class hal
+  user/group system
+
+teed
+  /vendor/bin/teed
+  TEE device: /dev/tkcore_admin
+  protected storage: /mnt/vendor/persist/t6 and /mnt/vendor/protect_f/tee
+  prebuilt TA data: /vendor/app/t6/data
+```
+
+Android also runs `mtk_storageproxyd`; its stock init definition uses `/dev/trusty-ipc-dev1` and `/dev/0:0:0:49476`.
+
+These details define the stock TrustKernel startup chain that recovery must reproduce before Keystore2 can use the hardware-backed KeyMint service.
+
 <!-- DT-SECURITY-STACK-END -->
