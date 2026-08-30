@@ -2026,4 +2026,14 @@ However, after deleting that installed recovery artifact, `m twrp_ramdisk` repor
 
 Build19 must make that dependency explicit so a normal recovery packaging build cannot silently reuse or omit a stale property-context artifact.
 
+### Build19 recovery property-context dependency fixed
+
+Adding `vendor_property_contexts.recovery` to the `twrp_ramdisk` required modules fixes the recovery property-context dependency gap.
+
+After explicitly deleting `recovery/root/vendor_property_contexts`, `m twrp_ramdisk` now rebuilds and installs the file automatically through the recovery property-context module.
+
+The recreated artifact is 1382 bytes with SHA256 `ec23a1a236202eaa2a68cfb71297183cb851a6d216dd72d06eb908712f63cdc6` and contains all four TrustKernel property labels.
+
+Therefore a normal recovery ramdisk packaging build no longer depends on a stale or manually prebuilt `vendor_property_contexts` artifact.
+
 <!-- DT-SECURITY-STACK-END -->
