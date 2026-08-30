@@ -1568,4 +1568,20 @@ Servicemanager then repeatedly waits for `android.hardware.boot.IBootControl/def
 
 The decrypted userdata mapper itself is independently proven valid and mountable as F2FS. Therefore the immediate automatic `/data` mount blocker is now the unavailable MediaTek BootControl AIDL service, not metadata encryption or F2FS validity.
 
+### Build17 BootControl SELinux causality proof
+
+The BootControl mount blocker was confirmed experimentally.
+
+With SELinux enforcing, `vendor.boot-default` ran in `u:r:hal_bootctl_default:s0` but hit enforcing AVC denials while accessing the recovery root filesystem and `/dev/block/sdc1` (`misc`). Recovery remained blocked in `futex_wait_queue`, and `/data` was not mounted.
+
+Without restarting recovery, SELinux was temporarily changed to permissive and only `vendor.boot-default` was restarted. The same recovery process immediately left its wait and completed the metadata-encrypted userdata mount:
+
+```text
+/dev/block/dm-15 on /data type f2fs (rw,...,inlinecrypt,...)
+```
+
+Recovery then traversed the real device-encrypted userdata tree.
+
+This proves that the remaining automatic `/data` mount blocker is SELinux policy/context for the MediaTek recovery BootControl HAL. Global permissive mode is diagnostic only and is not an acceptable permanent solution.
+
 <!-- DT-SECURITY-STACK-END -->
