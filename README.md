@@ -1173,4 +1173,18 @@ getFrameworkHalManifest: Successfully processed VINTF information
 
 This confirms that the Android 15 meta-version `9.0` incompatibility can be avoided with a recovery-compatible minimal VINTF declaration. However, `keystore2` continues to restart with SIGABRT approximately every five seconds after VINTF parsing succeeds. Therefore, the VINTF meta-version mismatch is a real recovery compatibility issue, but it is not the remaining Keystore2 crash cause.
 
+### Recovery property and process-profile differences
+
+Live recovery inspection confirms the expected device identity properties are present:
+
+```text
+ro.board.platform=mt6878
+ro.product.brand=Ulefone
+ro.product.model=Armor 29 Pro Thermal
+```
+
+However, the stock-Android vendor support properties `ro.vendor.mtk_trustkernel_tee_support` and `ro.vendor.mtk_trustonic_tee_support` are unset in recovery.
+
+The mounted Android system contains `/system/etc/task_profiles.json`, `/system/etc/cgroups.json`, and versioned task/cgroup profile files under `/system/etc/task_profiles/`. The recovery root currently lacks `/etc/task_profiles.json` while providing its own `/etc/cgroups.json`. This matches the observed recovery `logd` failures to load `/etc/task_profiles.json` and resolve profiles such as `NormalIoPriority`, `HighPerformance`, and `ServiceCapacityLow`; whether this is the direct cause of the `logd` abort remains under live validation.
+
 <!-- DT-SECURITY-STACK-END -->
