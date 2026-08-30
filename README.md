@@ -1958,4 +1958,14 @@ Device TrustKernel file contexts are now verified through the complete recovery 
 
 Device TrustKernel property contexts are correctly generated and installed into vendor output. The existing `recovery/root/vendor_property_contexts` is an older stale artifact and must be revalidated after the full recovery packaging step.
 
+### Build19 dedicated Keystore policy compile and metadata-key labels
+
+The Build19 recovery SELinux policy compiles successfully with the device Keystore2 service running in the platform `keystore` domain. The recovery-specific policy permits the ramdisk rootfs linker/runtime and Binder communication required by the live dedicated-domain probe without violating platform neverallows.
+
+Live recovery inspection also confirms that `/metadata/vold/metadata_encryption/key` and all four existing metadata-key files (`version`, `secdiscardable`, `encrypted_key`, and `keymaster_key_blob`) are labeled `vold_metadata_file`.
+
+`MetadataCrypt.cpp` constructs the metadata key directory and calls `retrieveOrGenerateKey()` for that directory. Therefore enforcing metadata decryption requires read-only recovery access to the existing metadata-key bundle, not merely to `keymaster_key_blob`.
+
+Any platform-policy exception must remain recovery-only and read-only; metadata-key mutation must remain forbidden.
+
 <!-- DT-SECURITY-STACK-END -->
