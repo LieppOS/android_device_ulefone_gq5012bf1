@@ -1848,4 +1848,16 @@ This explains the enforcing `teed` failure: init correctly transitions it into t
 
 The physical misc block device remains correctly relabeled `u:object_r:misc_block_device:s0`, preserving the previously verified narrow BootControl fix.
 
+### Build18 complete security-domain AVC characterization
+
+Fresh service starts under SELinux enforcing prove that all three intended TrustKernel domains fail at recovery runtime startup: `tee`, `hal_keymint_default`, and `hal_gatekeeper_default` are each denied `{ map }` on rootfs-labeled `/system/bin/linker64`.
+
+An already-running `teed` process that had mapped its runtime while permissive remains alive after SELinux is returned to enforcing, confirming that the immediate failure is startup-time runtime mapping rather than a later TrustKernel steady-state fault.
+
+The permissive AVC stream additionally exposes required recovery integration beyond the linker: TrustKernel device nodes including `tkcore_client`, `tkcore_admin`, and `rpmb0` currently resolve to generic `device`; stock TrustKernel filesystem objects expose raw contexts such as `tkcore_protect_data_file` and `tkcore_systa_file` but resolve to `unlabeled` in the loaded recovery policy; and `vendor.trustkernel.ready` currently resolves to generic `vendor_default_prop`.
+
+KeyMint and Gatekeeper also require Binder communication with the recovery domain because recovery-hosted Keystore2 and recovery itself participate in the FBE path.
+
+These findings rule out broad allows to generic `device`, `unlabeled`, or `vendor_default_prop`. Build19 should import or reproduce the specific stock TrustKernel labels and add only the recovery-specific runtime/Binder permissions actually required.
+
 <!-- DT-SECURITY-STACK-END -->
