@@ -2065,4 +2065,14 @@ This proves the security-prep/VINTF/BootControl path is functional and identifie
 The redundant `restart logd` action is also removed: live init logs showed restarted logd aborting because it attempted to reset the already-established read-only `ro.logd.kernel` property.
 
 
+### Build22 enforcing TrustKernel linker result
+
+Build22 boots the security-prep path successfully under SELinux enforcing. `gq5012bf1-security-prep` exits normally, `vendor.trustkernel.fs.state=ready`, BootControl remains running, `teed` remains running in `u:r:tee:s0`, and `vendor.trustkernel.ready=true` is raised.
+
+The previous `/system/bin/linker64 { execute }` denial is therefore fixed.
+
+The next enforcing blocker is now directly observed in the TrustKernel HALs: both `hal_keymint_default` and `hal_gatekeeper_default` receive Binder `{ call }` denials targeting `u:r:recovery:s0`, then abort and restart. Recovery remains blocked while KeyMint/Gatekeeper are unavailable.
+
+The next policy change adds only the missing HAL-to-recovery Binder call directions for these two verified domains.
+
 <!-- DT-SECURITY-STACK-END -->
