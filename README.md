@@ -1708,4 +1708,16 @@ Mounted vendor contains dedicated TrustKernel service definitions at `/vendor/et
 
 Stable recovery partition names were verified: `/dev/block/by-name/persist`, `protect1`, `metadata`, `userdata`, and `misc`. Active logical system and vendor are available through `/dev/block/mapper/system${ro.boot.slot_suffix}` and `/dev/block/mapper/vendor${ro.boot.slot_suffix}`.
 
+### Build18 security-service and VINTF inputs
+
+Stock vendor defines TrustKernel KeyMint as class `early_hal`, user/group `system:system`, using an executable labeled `hal_keymint_default_exec`.
+
+Stock vendor defines TrustKernel Gatekeeper as class `hal`, user/group `system:system`, using an executable labeled `hal_gatekeeper_default_exec`.
+
+These stock service identities, rather than the root/manual execution identities used during Build17 diagnostics, are the correct persistence inputs.
+
+The generated recovery root currently packages `android.system.keystore2-service.xml` as a framework manifest with meta-version `1.0`, while the normal generated system-side Keystore2 manifest is meta-version `8.0` with AIDL version 4.
+
+The Build17 hardware test proved that recovery libvintf accepts a minimal framework manifest at meta-version 8.0 with the Keystore2 AIDL fragment, so Build18 will reconstruct the recovery system-side VINTF at runtime before Keystore2 starts.
+
 <!-- DT-SECURITY-STACK-END -->
