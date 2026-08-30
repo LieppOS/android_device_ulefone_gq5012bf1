@@ -1108,4 +1108,37 @@ Android also runs `mtk_storageproxyd`; its stock init definition uses `/dev/trus
 
 These details define the stock TrustKernel startup chain that recovery must reproduce before Keystore2 can use the hardware-backed KeyMint service.
 
+### Recovery-visible TrustKernel prerequisites
+
+Direct inspection from recovery with the stock vendor, persist, and protect1 partitions mounted confirmed:
+
+```text
+/vendor                      -> vendor_a (EROFS, read-only)
+/mnt/vendor/persist          -> persist (ext4)
+/mnt/vendor/protect_f        -> protect1 (ext4)
+
+/dev/tkcore_admin            present
+/dev/rpmb0                   present
+/dev/teeperf                 present
+/dev/0:0:0:49476             present
+/dev/trusty-ipc-dev*         absent
+/dev/gz_kree                 absent
+```
+
+The TrustKernel system TA directory `/vendor/app/t6` is present in stock vendor and contains the device TA payloads and configuration used by `teed`.
+
+Verified stock executables:
+
+```text
+/vendor/bin/teed
+/vendor/bin/mtk_storageproxyd
+/vendor/bin/tee_check_keybox
+/vendor/bin/hw/android.hardware.security.keymint@3.0-service.trustkernel
+/vendor/bin/hw/android.hardware.gatekeeper-service.trustkernel
+```
+
+ELF inspection confirms that `teed`, the TrustKernel KeyMint service, and the TrustKernel Gatekeeper service all depend on `libteec.so`. The KeyMint service additionally depends on the AIDL KeyMint V3, RKP V3, SharedSecret V1, and SecureClock V1 NDK interfaces.
+
+`mtk_storageproxyd` instead depends on `libisetrusty.so` and its stock command line targets `/dev/trusty-ipc-dev1`. No `trusty-ipc-dev*` node is present during recovery boot, so it is not currently treated as a prerequisite for the TrustKernel KeyMint bring-up path.
+
 <!-- DT-SECURITY-STACK-END -->
