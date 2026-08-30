@@ -1,0 +1,4 @@
+ro.vendor.mtk_trustkernel_tee_support u:object_r:vendor_mtk_trustkernel_tee_prop:s0
+ro.vendor.trustkernel.                 u:object_r:vendor_mtk_trustkernel_tee_prop:s0
+vendor.trustkernel.                    u:object_r:vendor_mtk_trustkernel_tee_prop:s0
+ro.boot.rpmb_status                    u:object_r:vendor_mtk_trustkernel_tee_prop:s0

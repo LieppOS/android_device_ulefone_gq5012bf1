@@ -1,0 +1,13 @@
+type tkcore_admin_device, dev_type;
+type tkcore_client_device, dev_type, mlstrustedobject;
+type teeperf_device, dev_type, mlstrustedobject;
+type teei_rpmb_device, dev_type;
+type rpmb_device, dev_type;
+
+type tkcore_systa_file, file_type, vendor_file_type;
+type tkcore_spta_file, file_type, data_file_type, mlstrustedobject;
+type tkcore_data_file, file_type, data_file_type, mlstrustedobject;
+type tkcore_protect_data_file, file_type, data_file_type;
+type tkcore_log_file, file_type, data_file_type;
+
+type proc_tkcore, fs_type, proc_type;

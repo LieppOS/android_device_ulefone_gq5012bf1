@@ -1,0 +1,14 @@
+diff --git a/prebuilt/Android.mk b/prebuilt/Android.mk
+index a024033..0ca26f7 100755
+--- a/prebuilt/Android.mk
++++ b/prebuilt/Android.mk
+@@ -492,7 +492,8 @@ LOCAL_REQUIRED_MODULES += init_second_stage.recovery \
+     plat_hardware_contexts \
+     vndservice_contexts \
+     plat_keystore2_key_contexts \
+-    vendor_hwservice_contexts
++    vendor_hwservice_contexts \
++    vendor_property_contexts.recovery
+ 
+ include $(BUILD_PHONY_PACKAGE)
+ 

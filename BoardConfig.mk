@@ -247,3 +247,6 @@ TW_INCLUDE_CRYPTO := true
 TW_INCLUDE_CRYPTO_FBE := true
 TW_INCLUDE_FBE_METADATA_DECRYPT := true
 TW_USE_FSCRYPT_POLICY := 2
+
+# Device-specific vendor SELinux policy
+BOARD_VENDOR_SEPOLICY_DIRS += device/ulefone/gq5012bf1/sepolicy/vendor

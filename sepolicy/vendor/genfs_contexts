@@ -1,0 +1,1 @@
+genfscon proc /tkcore u:object_r:proc_tkcore:s0

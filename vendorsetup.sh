@@ -32,3 +32,29 @@ export OF_USE_LZ4_COMPRESSION=1
 
 export FOX_BUILD_DEVICE=gq5012bf1
 export FOX_VARIANT=vBaR
+
+# Apply device-required platform source patches.
+_gq_apply_patch() {
+    local repo="$1"
+    local patch="$2"
+    local label="$3"
+
+    if git -C "$repo" apply --reverse --check "$patch" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if git -C "$repo" apply --check "$patch" >/dev/null 2>&1; then
+        echo "[gq5012bf1] Applying $label"
+        git -C "$repo" apply "$patch" || return 1
+        return 0
+    fi
+
+    echo "[gq5012bf1] ERROR: $label does not apply cleanly" >&2
+    return 1
+}
+
+if [ -n "$ANDROID_BUILD_TOP" ]; then
+    _gq_apply_patch "$ANDROID_BUILD_TOP/system/sepolicy" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/system_sepolicy/0001-recovery-read-vold-metadata-key.patch" "recovery metadata SELinux patch" || return 1
+    _gq_apply_patch "$ANDROID_BUILD_TOP/bootable/recovery" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/bootable_recovery/0001-twrp-ramdisk-require-vendor-property-contexts.patch" "recovery property-context dependency patch" || return 1
+    unset -f _gq_apply_patch
+fi

@@ -12,6 +12,17 @@ SYSTEM_DEV="/dev/block/mapper/system${SLOT}"
 VENDOR_DEV="/dev/block/mapper/vendor${SLOT}"
 SYSTEM_MNT="/mnt/system${SLOT}"
 
+WAIT=0
+while [ ! -e "$SYSTEM_DEV" ] || [ ! -e "$VENDOR_DEV" ]; do
+    WAIT=$((WAIT + 1))
+    if [ "$WAIT" -ge 60 ]; then
+        echo "mapper wait timeout: system=$SYSTEM_DEV vendor=$VENDOR_DEV"
+        exit 10
+    fi
+    sleep 1
+done
+echo "mappers ready after ${WAIT}s"
+
 mkdir -p "$SYSTEM_MNT" /vendor /mnt/vendor/persist /mnt/vendor/protect_f
 
 grep -q " $SYSTEM_MNT " /proc/mounts ||
@@ -69,10 +80,6 @@ mkdir -p /system/etc/vintf/manifest || exit 41
 cp /system/etc/gq5012bf1-vintf/manifest.xml /system/etc/vintf/manifest.xml || exit 42
 cp /system/etc/gq5012bf1-vintf/android.system.keystore2-service.xml /system/etc/vintf/manifest/android.system.keystore2-service.xml || exit 43
 chmod 0644 /system/etc/vintf/manifest.xml /system/etc/vintf/manifest/android.system.keystore2-service.xml
-
-MISC_REAL="$(readlink -f /dev/block/by-name/misc)"
-[ -n "$MISC_REAL" ] || exit 51
-chcon u:object_r:misc_block_device:s0 "$MISC_REAL" || exit 52
 
 [ ! -e /dev/teeperf ] || { chown system:system /dev/teeperf; chmod 0660 /dev/teeperf; }
 [ ! -e /dev/tkcore_admin ] || { chown system:system /dev/tkcore_admin; chmod 0600 /dev/tkcore_admin; }

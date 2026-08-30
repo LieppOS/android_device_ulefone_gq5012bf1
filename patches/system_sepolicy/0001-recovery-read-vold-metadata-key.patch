@@ -1,0 +1,53 @@
+diff --git a/public/recovery.te b/public/recovery.te
+index 324320bc1..afc1423f8 100755
+--- a/public/recovery.te
++++ b/public/recovery.te
+@@ -141,6 +141,10 @@ recovery_only(`
+   # Recovery uses liblogwrap to write fsck logs to kmsg, liblogwrap requires devpts.
+   allow recovery devpts:chr_file rw_file_perms;
+   allow recovery kmsg_device:chr_file { getattr w_file_perms };
++
++  # Recovery links vold metadata decryption directly and only retrieves an existing key.
++  allow recovery vold_metadata_file:dir search;
++  allow recovery vold_metadata_file:file { getattr open read };
+ ')
+ 
+ ###
+diff --git a/public/vold.te b/public/vold.te
+index ad6ef830e..24097af07 100644
+--- a/public/vold.te
++++ b/public/vold.te
+@@ -309,6 +309,7 @@ neverallow {
+     domain
+     -init
+     -vold
++    recovery_only(`-recovery')
+ } vold_metadata_file:dir *;
+ 
+ neverallow {
+@@ -323,6 +324,7 @@ neverallow {
+     -init
+     -vold
+     -vold_prepare_subdirs
++    recovery_only(`-recovery')
+ } vold_metadata_file:notdevfile_class_set ~{ relabelto getattr };
+ 
+ neverallow {
+@@ -331,7 +333,16 @@ neverallow {
+     -kernel
+     -vold
+     -vold_prepare_subdirs
+-} { vold_data_file vold_metadata_file }:notdevfile_class_set *;
++} vold_data_file:notdevfile_class_set *;
++
++neverallow {
++    domain
++    -init
++    -kernel
++    -vold
++    -vold_prepare_subdirs
++    recovery_only(`-recovery')
++} vold_metadata_file:notdevfile_class_set *;
+ 
+ neverallow { domain -vold -init } restorecon_prop:property_service set;
+ 

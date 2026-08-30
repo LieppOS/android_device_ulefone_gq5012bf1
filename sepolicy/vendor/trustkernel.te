@@ -1,0 +1,69 @@
+recovery_only(`
+# Recovery executables/libraries are ramdisk rootfs objects.
+allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:dir r_dir_perms;
+allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:file r_file_perms;
+
+# Stock TrustKernel devices and RPMB candidates.
+allow tee tkcore_admin_device:chr_file rw_file_perms;
+allow tee tkcore_client_device:chr_file rw_file_perms;
+allow tee teei_rpmb_device:chr_file rw_file_perms;
+allow tee teei_rpmb_device:blk_file rw_file_perms;
+allow tee rpmb_device:chr_file rw_file_perms;
+allow tee rpmb_device:blk_file rw_file_perms;
+
+# Mirror the stock RPMB ioctl contract.
+allowxperm tee rpmb_device:chr_file ioctl { 0x2282 0x2285 0x5388 0x5391 0xb300-0xb301 };
+allowxperm tee rpmb_device:blk_file ioctl { 0x5388 0x5391 0xb300-0xb301 };
+
+# TrustKernel TA/data/protected storage.
+allow tee tkcore_data_file:dir create_dir_perms;
+allow tee tkcore_data_file:file create_file_perms;
+allow tee tkcore_data_file:file map;
+allow tee tkcore_protect_data_file:dir create_dir_perms;
+allow tee tkcore_protect_data_file:file create_file_perms;
+allow tee tkcore_protect_data_file:file map;
+allow tee tkcore_systa_file:dir r_dir_perms;
+allow tee tkcore_systa_file:file r_file_perms;
+allow tee tkcore_systa_file:file map;
+allow tee tkcore_spta_file:dir create_dir_perms;
+allow tee tkcore_spta_file:file create_file_perms;
+allow tee tkcore_spta_file:file map;
+allow tee tkcore_log_file:file create_file_perms;
+allow tee tkcore_log_file:file map;
+
+# /proc/tkcore and TrustKernel properties.
+allow tee proc_tkcore:dir search;
+allow tee proc_tkcore:file rw_file_perms;
+allow tee proc_tkcore:file map;
+set_prop(tee, vendor_mtk_trustkernel_tee_prop)
+set_prop(recovery, vendor_mtk_trustkernel_tee_prop)
+
+# TrustKernel KeyMint and Gatekeeper.
+allow hal_keymint_default tkcore_client_device:chr_file rw_file_perms;
+allow hal_keymint_default tkcore_protect_data_file:dir search;
+allow hal_keymint_default tkcore_protect_data_file:file r_file_perms;
+allow hal_keymint_default tkcore_protect_data_file:file map;
+allow hal_gatekeeper_default tkcore_client_device:chr_file rw_file_perms;
+
+# Recovery hosts Keystore2 and is the FBE client.
+binder_call(recovery, recovery)
+hal_client_domain(recovery, hal_keymint)
+hal_client_domain(recovery, hal_gatekeeper)
+allow recovery keystore_service:service_manager find;
+allow recovery keystore_compat_hal_service:service_manager find;
+
+# Metadata-encryption key and Keystore2 SELinux access checks.
+allow recovery selinuxfs:dir { getattr search read open };
+allow recovery selinuxfs:file { getattr read write open };
+allow recovery kernel:security compute_av;
+allow recovery vold_key:keystore2_key { manage_blob use };
+
+# Recovery Keystore2 uses its normal domain while its linker/runtime remains on ramdisk rootfs.
+allow keystore rootfs:dir r_dir_perms;
+allow keystore rootfs:file r_file_perms;
+allow keystore rootfs:file execute;
+
+# Keystore2 and recovery communicate through the recovery Binder environment.
+binder_call(keystore, recovery)
+binder_call(recovery, keystore)
+')

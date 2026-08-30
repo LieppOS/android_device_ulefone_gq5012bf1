@@ -36,10 +36,20 @@ service vendor.gatekeeper /vendor/bin/hw/android.hardware.gatekeeper-service.tru
     group system
     disabled
 
+service gq5012bf1-keystore2 /system/bin/keystore2 /tmp/misc/keystore
+    class early_hal
+    user root
+    group keystore readproc log
+    writepid /dev/cpuset/foreground/tasks
+    seclabel u:r:keystore:s0
+    disabled
+
 on boot
     stop keystore2
     stop vendor.boot-default
-    exec_start gq5012bf1-security-prep
+    start gq5012bf1-security-prep
+
+on property:vendor.trustkernel.fs.state=ready
     restart logd
     start teed
     start vendor.boot-default
@@ -50,4 +60,5 @@ on property:vendor.trustkernel.ready=true
 
 on property:init.svc.vendor.keymint-3-0-trustkernel=running
     exec u:r:recovery:s0 root root -- /system/bin/sleep 1
-    start keystore2
+    restorecon /system/bin/keystore2
+    start gq5012bf1-keystore2
