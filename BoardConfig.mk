@@ -194,6 +194,28 @@ TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 # init.recovery.usb.rc on exactly this variable.
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 
+# HW TEST 2 (build 13) finding: the ADB gadget STILL died ~3s after boot, so the
+# line above is correct hygiene but was NOT sufficient. The next evidence-backed
+# root-cause candidate is automatic MTP startup:
+#
+#   data.cpp:1449            tw_mtp_enabled defaults to 1 when TW_HAS_MTP
+#   twrp.cpp:295             at startup, if tw_mtp_enabled -> Enable_MTP()
+#   partitionmanager.cpp     Enable_MTP() does:
+#       property_set(sys.usb.config, none)              <- tears the gadget down
+#       write /sys/class/android_usb/android0/idVendor  <- LEGACY sysfs path
+#       write /sys/class/android_usb/android0/idProduct <- LEGACY sysfs path
+#       property_set(sys.usb.config, mtp,adb)           <- recompose
+#
+# GQ5012BF1 is a configfs device (stock sets sys.usb.configfs=1), so those
+# android_usb writes target the wrong interface. If the subsequent mtp,adb
+# property transition cannot rebuild the configfs gadget, ADB will remain down.
+# Host timing matches this path: 18d1:d001 appears, then a permanent disconnect
+# ~3s later as the OrangeFox UI finishes starting. Build 14 tests this hypothesis.
+#
+# Disable MTP for bring-up. Revisit only after ADB is stable; if MTP is wanted
+# later it needs the configfs/ffs path, not the legacy one.
+TW_EXCLUDE_MTP := true
+
 TW_INCLUDE_FASTBOOTD := true
 TW_INCLUDE_REPACKTOOLS := true
 TW_INCLUDE_RESETPROP := true
