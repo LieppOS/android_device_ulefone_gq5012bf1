@@ -241,3 +241,9 @@ BUILD_BROKEN_PLUGIN_VALIDATION := \
     soong-libguitwrp_defaults \
     soong-libminuitwrp_defaults \
     soong-vold_defaults
+
+# Encryption / Android 15 FBE
+TW_INCLUDE_CRYPTO := true
+TW_INCLUDE_CRYPTO_FBE := true
+TW_INCLUDE_FBE_METADATA_DECRYPT := true
+TW_USE_FSCRYPT_POLICY := 2
