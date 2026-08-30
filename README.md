@@ -1896,4 +1896,14 @@ The linker AVC only requires rootfs read/map access, not execution, so the Trust
 
 Build19 will use the standard KeyMint and Gatekeeper HAL-client macros. Keystore2 registration must be solved by running Keystore2 in an appropriate service domain rather than granting recovery permission to register Keystore services. Direct recovery access to `vold_metadata_file` is also excluded by platform policy and must not be bypassed with a device allow.
 
+### Build19 recovery SELinux policy compiles
+
+After replacing rootfs execute permissions with read/map access, making recovery a standard KeyMint and Gatekeeper HAL client, and removing platform-neverallowed Keystore registration and direct `vold_metadata_file` access, the device-specific Build19 policy compiles successfully as `sepolicy.recovery`.
+
+This proves that `BOARD_VENDOR_SEPOLICY_DIRS` consumes the device TrustKernel types, contexts, procfs label, property label, HAL permissions, RPMB permissions, and recovery-specific runtime access without violating the Android 14 recovery policy neverallows.
+
+The remaining Keystore2 issue is structural: OrangeFox recovery explicitly launches `/system/bin/keystore2` with `seclabel u:r:recovery:s0`, while platform policy reserves Keystore service registration for the dedicated `keystore` domain. Build19 must therefore integrate recovery Keystore2 with the proper Keystore domain rather than grant service registration to `recovery`.
+
+Platform policy also explicitly restricts `vold_metadata_file` access to init/vold-related domains. Direct recovery access cannot be added through device policy and remains a separate enforcing-FBE integration question.
+
 <!-- DT-SECURITY-STACK-END -->
