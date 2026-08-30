@@ -890,6 +890,91 @@ The following hardware and firmware areas remain incomplete or undocumented.
 
 ---
 
+<!-- DT-PARTITION-DISCOVERY-START -->
+## Additional firmware partition findings
+
+Stock MediaTek fstab data exposes the following physical firmware and persistent partitions in addition to the normal Android A/B and dynamic-partition layout:
+
+```text
+protect1
+protect2
+nvdata
+nvcfg
+persist
+frp
+nvram
+proinfo
+lk1
+bootloader2
+para
+misc
+init_boot
+boot
+vbmeta_vendor
+vbmeta_system
+logo
+expdb
+seccfg
+tee1
+tee2
+scp1
+scp2
+sspm1
+sspm2
+dpm1
+dpm2
+mcupm1
+mcupm2
+modem
+md1dsp
+md1arm7
+md3img
+gz1
+gz2
+ccu
+vcp
+gpueb
+mcf_ota
+vendor_boot
+mvpu_algo1
+mvpu_algo2
+apusys1
+apusys2
+spmfw
+pi_img
+boot_para
+odmdtbo
+dtbo
+connsys_wifi
+connsys_bt
+otp
+vbmeta
+```
+
+The stock fstab also defines persistent mounts for:
+
+```text
+protect1 -> /mnt/vendor/protect_f
+protect2 -> /mnt/vendor/protect_s
+nvdata   -> /mnt/vendor/nvdata
+nvcfg    -> /mnt/vendor/nvcfg
+persist  -> /mnt/vendor/persist
+```
+
+These partitions are important targets for future documentation of modem/NV data, calibration, TEE, firmware, connectivity, and boot-chain ownership.
+
+### vendor_boot readback validation
+
+A live readback of `vendor_boot_a` returned exactly 64 MiB and matched the image previously written to the partition byte-for-byte.
+
+```text
+size: 67108864 bytes
+SHA-256: 795c19628628dafb4d0b48990c9a0bceae04032387ae0866637233f0e4a27895
+```
+
+This independently confirms the physical `vendor_boot` partition size and full-image write/readback behavior.
+<!-- DT-PARTITION-DISCOVERY-END -->
+
 ## Repository scope
 
 This repository should contain device-specific Android configuration and documentation such as:
