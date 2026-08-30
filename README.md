@@ -2050,4 +2050,10 @@ Restoring unconditional `start vendor.boot-default` did not resolve the cold-boo
 
 Build21 therefore isolates the remaining boot-time variable by disabling automatic `gq5012bf1-security-prep` startup while retaining the Build19 SELinux/context changes and unconditional BootControl startup.
 
+### Build20 unconditional BootControl hardware result
+
+Build20 restored unconditional `start vendor.boot-default` while retaining the Build19 security stack.
+
+The device still hangs at the OrangeFox splash. Therefore conditional BootControl startup is not sufficient to explain the Build19/Build20 cold-boot regression.
+
 <!-- DT-SECURITY-STACK-END -->
