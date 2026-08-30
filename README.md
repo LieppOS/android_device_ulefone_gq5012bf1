@@ -1738,4 +1738,12 @@ The retained generated artifact is `out/target/product/gq5012bf1/vendor_boot.img
 
 Build18 packaged recovery verification therefore needs to unpack this retained generated vendor_boot and inspect its vendor ramdisk fragment.
 
+### Build18 generated vendor_boot fragment layout
+
+Unpacking the retained Build18 `vendor_boot.img` confirms vendor_boot header version 4 with the expected stock geometry and DTB size, but its vendor ramdisk table is not a complete stock image.
+
+The generated PLATFORM fragment `vendor_ramdisk00` is only 4 bytes, while `vendor_ramdisk01` is a type-2 recovery fragment named `recovery` with size 33571785 bytes.
+
+Therefore `out/target/product/gq5012bf1/vendor_boot.img` must never be flashed directly. The authoritative Build18 payload is its `vendor_ramdisk01` recovery fragment, which must be combined with the byte-identical stock PLATFORM fragment and stock DTB when reconstructing the final 64 MiB vendor_boot image.
+
 <!-- DT-SECURITY-STACK-END -->
