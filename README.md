@@ -1860,4 +1860,16 @@ KeyMint and Gatekeeper also require Binder communication with the recovery domai
 
 These findings rule out broad allows to generic `device`, `unlabeled`, or `vendor_default_prop`. Build19 should import or reproduce the specific stock TrustKernel labels and add only the recovery-specific runtime/Binder permissions actually required.
 
+### Build18 missing TrustKernel recovery policy types
+
+Stock vendor SELinux contexts define dedicated TrustKernel labels for `/vendor/app/t6`, `/data/vendor/t6`, protected TrustKernel storage, `/dev/tkcore_admin`, `/dev/tkcore_client`, `/dev/teeperf`, RPMB devices, and the `vendor.trustkernel.*` property namespace.
+
+The stock property namespace uses `vendor_mtk_trustkernel_tee_prop`. TrustKernel device nodes use dedicated types including `tkcore_admin_device`, `tkcore_client_device`, `teeperf_device`, and `teei_rpmb_device`.
+
+The current OrangeFox recovery policy contains none of the `tkcore_*` or TrustKernel property types. This explains why correctly labeled stock filesystem objects appear as `unlabeled`, while recovery-created TrustKernel device nodes remain generic `device` and TrustKernel properties resolve to `vendor_default_prop`.
+
+The Android sepolicy build supports `BOARD_VENDOR_SEPOLICY_DIRS`, and recovery-specific vendor file/property contexts plus the compiled recovery policy are generated from that policy pipeline. The device tree currently supplies no device-specific sepolicy directory.
+
+Therefore Build19 must add a consumed device vendor-sepolicy directory containing the stock-specific TrustKernel types and contexts rather than granting access to generic `unlabeled`, `device`, or `vendor_default_prop`.
+
 <!-- DT-SECURITY-STACK-END -->
