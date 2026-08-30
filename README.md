@@ -1720,4 +1720,14 @@ The generated recovery root currently packages `android.system.keystore2-service
 
 The Build17 hardware test proved that recovery libvintf accepts a minimal framework manifest at meta-version 8.0 with the Keystore2 AIDL fragment, so Build18 will reconstruct the recovery system-side VINTF at runtime before Keystore2 starts.
 
+### Build18 persistence candidate builds and stages correctly
+
+Commit `5afc686` integrates the first persistent recovery FBE/security-stack candidate.
+
+`mka vendorbootimage` completed successfully. The generated recovery staging root contains the device security init RC, security setup script, minimal VINTF framework manifest, and Keystore2 fragment. `init.recovery.mt6878.rc` imports the new device security RC.
+
+The staged `gq5012bf1-security-setup.sh` has SHA256 `2cca80809e518a3e4fb4ca0b571e3636f3e30d47fc14860546333dc8446ab7dd`, matching the intended source.
+
+This verifies build/staging integration only. Build18 remains unverified on hardware until the final recovery ramdisk is inspected, reconstructed into the stock vendor_boot geometry, and cold-boot tested.
+
 <!-- DT-SECURITY-STACK-END -->
