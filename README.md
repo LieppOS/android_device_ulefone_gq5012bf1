@@ -1758,4 +1758,14 @@ The packaged setup script retains SHA256 `2cca80809e518a3e4fb4ca0b571e3636f3e30d
 
 This closes the Build18 recovery-fragment packaging gate. The next gate is reconstruction and offline verification of the complete 64 MiB vendor_boot image using the stock PLATFORM fragment and stock DTB.
 
+### Build18 raw vendor_boot reconstruction verification
+
+The Build18 raw vendor_boot was reconstructed with the byte-identical stock PLATFORM fragment, authoritative Build18 recovery fragment, and byte-identical stock DTB.
+
+The raw image is 62685184 bytes with SHA256 `40519556e86c53bca8f8eb2f91765152ce5ecfdd86e83ffbad13b1df1c1c2f6a`.
+
+Unpacking confirms vendor_boot header version 4, 4096-byte pages, stock load offsets, stock vendor cmdline, zero bootconfig, PLATFORM type 1, and recovery type 2 named `recovery`.
+
+Component verification is exact: stock PLATFORM SHA256 `9201a4e5c1b7cb1fc0ce35375af10a3d966dac8b84615a226f98b7d7be2aec00`, Build18 recovery SHA256 `2e0b627d32ad0266aa477d773ad364070d116e9e418f42d7497548ea859f7e3f`, and stock DTB SHA256 `bc156c29c33d8226230f07888df0a3d7a1e9c4b85c5fd550a4c4bd1a3134c0d4` all match their unpacked counterparts byte-for-byte.
+
 <!-- DT-SECURITY-STACK-END -->
