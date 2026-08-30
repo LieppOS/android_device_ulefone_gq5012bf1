@@ -1906,4 +1906,14 @@ The remaining Keystore2 issue is structural: OrangeFox recovery explicitly launc
 
 Platform policy also explicitly restricts `vold_metadata_file` access to init/vold-related domains. Direct recovery access cannot be added through device policy and remains a separate enforcing-FBE integration question.
 
+### Build19 remaining enforcing-FBE boundaries
+
+The compiled Build19 recovery policy contains the new TrustKernel types including `tkcore_*`, `proc_tkcore`, RPMB types, `teeperf_device`, and `vendor_mtk_trustkernel_tee_prop`.
+
+OrangeFox recovery explicitly launches Keystore2 as `u:r:recovery:s0`, user root, with `/tmp/misc/keystore` as its database directory. The live Build18 process matches this definition. During the successful permissive FBE run, Keystore2 generates recovery-domain AVCs for Keystore-specific operations including `add_auth`, `locksettings_key` operations, SELinux access checks, and Binder communication with KeyMint. This confirms that enforcing integration should move Keystore2 into the dedicated `keystore` domain rather than grant Keystore privileges to `recovery`.
+
+Recovery also directly reads `/metadata/vold/metadata_encryption/key/keymaster_key_blob`, which is labeled `vold_metadata_file`. Android platform policy explicitly neverallows ordinary recovery-domain access to this type, so this cannot be solved with a device vendor allow rule.
+
+The TrustKernel types are confirmed present in the compiled recovery policy, but the current generated-context search did not yet locate the corresponding recovery file/property context artifacts. Context packaging must therefore be verified before Build19 may rely on those contexts or remove the proven runtime misc relabel fallback.
+
 <!-- DT-SECURITY-STACK-END -->
