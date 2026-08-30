@@ -1626,4 +1626,26 @@ At this stage recovery continuously waits for `android.hardware.gatekeeper.IGate
 
 Therefore metadata encryption and DE fscrypt are operational, while user 0 CE decryption is now blocked on Gatekeeper / credential handling.
 
+### Build17 full user-0 FBE decryption breakthrough
+
+Starting the stock TrustKernel Gatekeeper service completed the remaining credential-encrypted storage path.
+
+The manually launched `/vendor/bin/hw/android.hardware.gatekeeper-service.trustkernel` opened its TrustKernel TEE session, registered `android.hardware.gatekeeper.IGatekeeper/default`, and successfully verified the existing user credential.
+
+Recovery then immediately continued with:
+
+```text
+fscrypt_unlock_ce_storage 0
+Trying user CE key /data/misc/vold/user_keys/ce/0/current
+Installed fscrypt key ... to /data
+Installed CE key for user 0
+fscrypt_prepare_user_storage for volume null, user 0, flags 2
+```
+
+After CE-key installation, `/data/system_ce/0` exposes normal filenames such as `accounts_ce.db`, and `/data/media/0` exposes normal internal-storage contents including `DCIM`, `Download`, `Documents`, and other user files. OrangeFox can browse the decrypted files directly.
+
+This proves end-to-end user-0 FBE recovery on hardware: TrustKernel verification, KeyMint metadata-key handling, dm-default-key metadata decryption, F2FS `/data` mounting, device-encrypted storage, Gatekeeper credential verification, and credential-encrypted fscrypt key installation all function successfully.
+
+The remaining work is persistence: the currently live-only vendor mounts, TrustKernel services, version properties, VINTF setup, task profiles, device-node permissions/labels, and Gatekeeper startup must be integrated into the recovery image and verified from a cold boot.
+
 <!-- DT-SECURITY-STACK-END -->
