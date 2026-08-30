@@ -1814,4 +1814,14 @@ This causally confirms that the first Build18 defect is startup ordering: the se
 
 After the successful retry, however, the init-managed `teed` service entered `restarting` and never raised `vendor.trustkernel.ready=true`. This is a separate persistence blocker and must be diagnosed independently before changing policy or service identity.
 
+### Build18 init-managed teed SELinux proof
+
+The Build18 init-managed TrustKernel `teed` service was tested with its intended stock identity: `system:system`, domain `u:r:tee:s0`, and `SYS_RAWIO` capability.
+
+With SELinux enforcing, every init launch fails immediately on an AVC denying `{ map }` of recovery `/system/bin/linker64`, whose recovery context is generic `rootfs`. `teed` then receives signal 11 and init retries it every five seconds.
+
+With only SELinux changed to permissive, the same init-managed service remains running in `tee_supp_read` and reports `vendor.trustkernel.ready=true`, filesystem state `ready`, and log state `ready`.
+
+After this permissive teed start, OrangeFox advances to its encrypted-data credential prompt. This proves that the second Build18 persistence blocker is the recovery SELinux execution environment for the proper `tee` domain, specifically the linker/rootfs mapping denial observed before any later TrustKernel failure.
+
 <!-- DT-SECURITY-STACK-END -->
