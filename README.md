@@ -444,6 +444,114 @@ This area still needs deeper documentation of the exact KeyMint / Keymaster / Ga
 
 ---
 
+<!-- DT-CRYPTO-BUILD-VALIDATION-START -->
+## Encryption integration status
+
+The device tree now reflects the stock userdata encryption model and metadata-partition requirements.
+
+Current `BoardConfig.mk` settings under validation:
+
+```make
+BOARD_USES_METADATA_PARTITION := true
+TW_INCLUDE_CRYPTO := true
+TW_INCLUDE_CRYPTO_FBE := true
+TW_INCLUDE_FBE_METADATA_DECRYPT := true
+TW_USE_FSCRYPT_POLICY := 2
+```
+
+These settings match the already verified stock storage layout:
+
+```text
+/metadata -> F2FS
+/data     -> F2FS
+
+fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized
+keydirectory=/metadata/vold/metadata_encryption
+```
+
+### Build-time validation
+
+A clean recovery ramdisk build with the encryption configuration enabled completed successfully.
+
+Validated recovery fragment:
+
+```text
+size:    approximately 33 MiB
+entries: 3939
+SHA-256: ba0e3989b1a75d57ba52118a87f82904a6d4940d37875b2eb6ffe1f4591b89ea
+```
+
+The build contains crypto/FBE userspace and libraries including:
+
+```text
+fscryptpolicyget
+keystore2
+keystore_cli_v2
+android.hardware.gatekeeper@1.0
+android.hardware.keymaster@3.0
+android.hardware.keymaster@4.0
+android.hardware.keymaster@4.1
+android.hardware.security.keymint-V3-ndk
+libfscrypt
+libgatekeeper
+libkeymaster4support
+libkeymaster4_1support
+libkeymint
+libkeymint_support
+```
+
+This confirms that the device-tree encryption flags cause the required generic Android crypto stack to be included in the built ramdisk.
+
+The build also preserved all previously required core files:
+
+```text
+system/bin/init
+system/bin/recovery
+system/bin/adbd
+system/bin/fastbootd
+sepolicy
+file_contexts
+system/etc/recovery.fstab
+init.recovery.mt6878.rc
+```
+
+The known main touchscreen module was also preserved byte-for-byte:
+
+```text
+recovery/root/lib/modules/focaltech_touch_spi_ft3680.ko
+SHA-256: 6629ec6148ac361a5f0085b8b19efa9d591426679f58262c4998345f41931162
+```
+
+Its init-time load rule is still present.
+
+### What this proves
+
+Verified:
+
+- the device tree builds successfully with FBE support enabled
+- metadata-partition support is enabled
+- fscrypt policy v2 is selected
+- Keymaster 3.0/4.0/4.1 compatibility libraries are present
+- KeyMint V3 interfaces are present
+- Gatekeeper and Keystore2 components are present
+- `libfscrypt` is present
+- the userdata fstab still carries the stock `v2+inlinecrypt_optimized` policy
+- existing touchscreen support remains intact
+
+Not yet verified on hardware:
+
+- automatic metadata mount during early recovery startup
+- metadata key unwrap through the device's real TEE/Keymaster implementation
+- creation of the decrypted userdata block device
+- successful F2FS `/data` mount
+- DE/CE FBE key handling
+- PIN/password decryption
+- `/data/media/0` access
+- persistent settings stored on real userdata
+
+The compile-time result is therefore considered **verified**, while runtime decryption remains **under investigation**.
+<!-- DT-CRYPTO-BUILD-VALIDATION-END -->
+
 ## USB
 
 The device uses Android USB configfs.
