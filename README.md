@@ -1978,4 +1978,14 @@ This supports a recovery-only read-only SELinux exception for existing `vold_met
 
 The Build19 recovery policy also continues to compile successfully after removing the unverified RPMB ioctl range, leaving only ioctl values confirmed from the stock TrustKernel policy.
 
+### Build19 metadata SELinux access contract proven read-only
+
+`MkdirsSync()` only creates missing parent directories and does not create the metadata `key` directory itself. On the existing device metadata layout all required parent directories already exist, so this path performs only existence/search checks.
+
+Recovery calls metadata decryption with `neverGen()`. If the metadata key directory is missing, `retrieveOrGenerateKey()` returns failure rather than generating or storing a replacement key.
+
+The complete captured recovery-to-`vold_metadata_file` AVC set contains only directory `search` and file `read`, `open`, and `getattr`. No metadata-key write, create, setattr, rename, unlink, or other mutation permission is observed or justified.
+
+Therefore the Android platform-policy carveout can be restricted to recovery-only read access to existing metadata-encryption key material.
+
 <!-- DT-SECURITY-STACK-END -->
