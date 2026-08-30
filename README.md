@@ -1838,4 +1838,14 @@ OrangeFox displayed its encrypted-data credential prompt. After the correct devi
 
 This proves the Build18 payload and service sequence are functionally sufficient for complete metadata, DE, credential verification, and CE decryption. Remaining work is limited to startup ordering and recovery SELinux integration; no further crypto algorithm, KeyMint version, Gatekeeper, RPMB, or metadata-key investigation is required.
 
+### Build18 recovery runtime SELinux layout
+
+The successful Build18 session confirms the intended service domains: TrustKernel `teed` runs as `u:r:tee:s0`, KeyMint as `u:r:hal_keymint_default:s0`, Gatekeeper as `u:r:hal_gatekeeper_default:s0`, Keystore2 as `u:r:recovery:s0`, and MediaTek BootControl as `u:r:hal_bootctl_default:s0`.
+
+Recovery `/system/bin/linker64`, `/system/bin/sh`, and core libraries including libc, libdl, and libm are all labeled `u:object_r:rootfs:s0`. Vendor security executables retain their proper vendor exec labels.
+
+This explains the enforcing `teed` failure: init correctly transitions it into the normal `tee` domain, but that domain lacks the recovery-specific access required to map the rootfs-labeled recovery linker. The corresponding permissive launch succeeds without changing UID, GID, capabilities, executable context, or service arguments.
+
+The physical misc block device remains correctly relabeled `u:object_r:misc_block_device:s0`, preserving the previously verified narrow BootControl fix.
+
 <!-- DT-SECURITY-STACK-END -->
