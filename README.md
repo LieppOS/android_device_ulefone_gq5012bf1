@@ -1396,4 +1396,22 @@ This controlled test proves that the previous `VERIFY_STATE: 2 TRIAL_STATE: 0` c
 
 The retail/device documentation name remains Ulefone Armor 29 Pro Thermal, but recovery must expose the Android product model `Armor 29 Pro` for the TrustKernel security stack.
 
+### Build17 verified KeyMint bring-up
+
+After correcting the recovery Android product model to `Armor 29 Pro`, TrustKernel reaches `VERIFY_STATE: 1 TRIAL_STATE: 1` and the stock TrustKernel KeyMint V3 service progresses beyond the previous secure-world rejection.
+
+Live Build17 testing confirms:
+
+```text
+KeyMintHAL: Open session successfully
+KeyMint device is current version (Some(300)) for TRUSTED_ENVIRONMENT
+Shared secret negotiation concluded successfully.
+```
+
+KeyMint registers its AIDL KeyMint, SecureClock, SharedSecret, and RemotelyProvisionedComponent interfaces. The previous `0xffff000f` unverified-device rejection is no longer present.
+
+The current Keystore2 blocker is now framework VINTF registration: Keystore2 reaches service registration but servicemanager reports that `android.system.keystore2.IKeystoreService/default` is not present in the framework VINTF manifest, causing Keystore2 to abort and restart. No userdata mapper is created yet.
+
+This proves that the TrustKernel verification failure and resulting secure-hardware communication failure have been resolved; framework VINTF declaration is now the immediate blocker.
+
 <!-- DT-SECURITY-STACK-END -->
