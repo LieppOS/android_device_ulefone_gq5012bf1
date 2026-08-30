@@ -1786,4 +1786,20 @@ The final recovery fragment still decodes to an SVR4 CPIO containing 3943 entrie
 
 Build18 is therefore offline-qualified for a controlled `vendor_boot_a` hardware test.
 
+### Build18 cold-boot timing failure
+
+The first Build18 cold boot reaches OrangeFox but remains at the splash logo. The persistent security setup service is executed, proving that the new recovery init import and service are active on hardware.
+
+The setup fails immediately because it runs before recovery has created the active dynamic-partition mapper:
+
+```text
+mount: '/dev/block/mapper/system_a'->'/mnt/system_a': No such file or directory
+```
+
+Consequently the active-system/vendor version tuple is not installed, TrustKernel `teed`, KeyMint, Gatekeeper and Keystore2 are not started, no userdata mapper is created, and `/data` remains unavailable.
+
+This is a startup-order/timing defect in the Build18 persistence integration, not a crypto failure. The Build17 hardware tests already prove the same security stack decrypts metadata, DE and user-0 CE storage when started after dynamic mappings exist.
+
+The Build18 setup must therefore run asynchronously after recovery begins dynamic-partition setup, rather than synchronously blocking the boot action before `/dev/block/mapper/system_${slot}` exists.
+
 <!-- DT-SECURITY-STACK-END -->
