@@ -2016,4 +2016,14 @@ From that automatically patched clean state, `sepolicy.recovery` compiles succes
 
 The `vendor_property_contexts.recovery` build target also installs the complete 1382-byte TrustKernel property-context file into `recovery/root/vendor_property_contexts`. Its SHA256 is identical to the generated vendor-installed property-context file, and a subsequent `twrp_ramdisk` build preserves those TrustKernel entries.
 
+### Build19 twrp_ramdisk property-context dependency gap
+
+The tracked `system/sepolicy` patch is byte-for-byte identical to the live automatically applied source diff (SHA256 `388b349e3124ea6724f9e5d22b6aa58dfb2209c8d491c97aad2768bd72380db2`), so the metadata-policy source patch is reproducible.
+
+`vendor_property_contexts.recovery` correctly installs the 1382-byte TrustKernel-aware property-context file into `recovery/root/vendor_property_contexts`.
+
+However, after deleting that installed recovery artifact, `m twrp_ramdisk` reports no work and does not recreate it. Therefore `twrp_ramdisk` currently lacks a dependency on the recovery variant of `vendor_property_contexts`.
+
+Build19 must make that dependency explicit so a normal recovery packaging build cannot silently reuse or omit a stale property-context artifact.
+
 <!-- DT-SECURITY-STACK-END -->
