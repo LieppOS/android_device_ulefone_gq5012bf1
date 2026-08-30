@@ -1886,4 +1886,14 @@ Stock KeyMint and Gatekeeper are allowed to use `tkcore_client_device`; KeyMint 
 
 Build19 will reproduce this narrow TrustKernel contract in device vendor sepolicy and will not grant access to generic `device`, `unlabeled`, `vendor_default_prop`, or generic block-device types.
 
+### Build19 first recovery-policy compile constraints
+
+The first device-specific Build19 recovery policy is confirmed to be consumed by `sepolicy.recovery`.
+
+AOSP neverallows reject several first-pass shortcuts: HAL domains may not receive rootfs `execute_no_trans`; recovery may not directly find KeyMint/Gatekeeper services without being a proper HAL client; recovery may not register Keystore2 service-manager entries; and recovery may not directly access `vold_metadata_file`.
+
+The linker AVC only requires rootfs read/map access, not execution, so the TrustKernel HAL runtime rule must use read/map permissions instead of `rx_file_perms`.
+
+Build19 will use the standard KeyMint and Gatekeeper HAL-client macros. Keystore2 registration must be solved by running Keystore2 in an appropriate service domain rather than granting recovery permission to register Keystore services. Direct recovery access to `vold_metadata_file` is also excluded by platform policy and must not be bypassed with a device allow.
+
 <!-- DT-SECURITY-STACK-END -->
