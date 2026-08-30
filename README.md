@@ -1526,4 +1526,19 @@ and created the decrypted userdata block mapping:
 
 This proves that, after correcting the vendor SPL and Android release inputs, the remaining platform security-patch mismatch was the decisive blocker preventing the existing metadata KeyMint blob from being accepted. The metadata-encryption device mapper is now created successfully. F2FS `/data` mounting and userspace FBE state still require separate verification.
 
+### Build17 decrypted userdata mapper without /data mount
+
+With the KeyMint REE version tuple matched to the active Android/vendor environment, recovery successfully creates the metadata-decrypted userdata mapper:
+
+```text
+/dev/block/mapper/userdata -> /dev/block/dm-15
+dm name: userdata
+```
+
+`/data` is not yet mounted, so metadata-encryption success and F2FS mount success are now separate stages.
+
+Before `fscrypt_mount_metadata_encrypted` creates the mapper, recovery probes the raw userdata backing device `/dev/block/sdc76` and receives F2FS magic mismatches. Those probes occur against the metadata-encrypted raw device; the decrypted mapper must be inspected separately.
+
+The on-disk metadata KeyMint blob remains 565 bytes and retains SHA256 `1eac61edfe777d0c6fa2f2d4f62ec892b6a031b90cb7064e4d6581c0a944fbca`, so the logged `Upgrading key` path did not change the observed blob contents.
+
 <!-- DT-SECURITY-STACK-END -->
