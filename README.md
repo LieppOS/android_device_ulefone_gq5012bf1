@@ -1686,4 +1686,16 @@ ro.product.first_api_level=35
 
 Therefore recovery can derive the KeyMint REE-version tuple dynamically from the currently active Android system and vendor images instead of hardcoding the current Android 16 release or security patch level.
 
+### Build17 persistence-input verification
+
+The source-tree `system/core/libprocessgroup/profiles/task_profiles.json` is not byte-identical to the working live recovery file. The source file is 13521 bytes with SHA256 `922493b5ccbdd208418401533dfac2e0778819903ae0ba3699bfdee0e0aa91e0`; the working `/etc/task_profiles.json` is 15069 bytes with SHA256 `f230763e7676dfb39397c2d909def41ddd59d73ff7b334718b885ce24095bf21`.
+
+Therefore the AOSP source-tree file must not silently replace the verified working task-profile input without a separate hardware test.
+
+Mounted vendor `trustkernel.rc` provides the exact TrustKernel TEE setup. `teed` runs as `system:system`, receives `SYS_RAWIO`, uses `/dev/tkcore_admin`, both RPMB candidates, persistent/protect_f storage, vendor TA paths, and the vendor TrustKernel property prefix.
+
+The stock TrustKernel FBE trigger sets filesystem mode 3 when `ro.crypto.type=file` and `ro.crypto.state=encrypted`, prepares `/data/vendor/t6/{fs,app}`, and advances `vendor.trustkernel.fs.state` to `ready`.
+
+The KeyMint and Gatekeeper processes in the successful live recovery were manually launched and therefore ran with the manual shell execution context; their live UID/SELinux identities are not suitable as persistent service definitions.
+
 <!-- DT-SECURITY-STACK-END -->
