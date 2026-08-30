@@ -1304,4 +1304,22 @@ PRODUCT_MODEL := Armor 29 Pro Thermal
 
 The working Android userspace reports `ro.product.model=Armor 29 Pro`, while the recovery runtime reports `ro.product.model=Armor 29 Pro Thermal`. A targeted source search found no other non-documentation `Armor 29 Pro Thermal` product-model definition in the device tree. The generated recovery `prop.default` and partition `build.prop` files do not contain a direct top-level `ro.product.model=` assignment, so the makefile product identity remains the controlled source-level variable to test. This does not yet prove that the model string alone determines TrustKernel verification state.
 
+### Recovery product-model propagation
+
+A controlled recovery build changed only the product identity from `PRODUCT_MODEL := Armor 29 Pro Thermal` to `PRODUCT_MODEL := Armor 29 Pro`.
+
+The Android build system resolved `PRODUCT_MODEL=Armor 29 Pro` and regenerated all recovery/product partition model properties accordingly:
+
+```text
+ro.product.system.model=Armor 29 Pro
+ro.product.vendor.model=Armor 29 Pro
+ro.product.odm.model=Armor 29 Pro
+ro.product.product.model=Armor 29 Pro
+ro.product.system_ext.model=Armor 29 Pro
+```
+
+No generated `Armor 29 Pro Thermal` model value remained. This provides a clean build for testing whether TrustKernel verification depends on the product model while leaving the actual recovery/verified-boot state unchanged.
+
+The model change remains experimental until hardware testing determines whether it changes TrustKernel `VERIFY_STATE`.
+
 <!-- DT-SECURITY-STACK-END -->
