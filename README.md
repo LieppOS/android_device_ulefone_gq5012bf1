@@ -1163,4 +1163,14 @@ Unrecognized manifest.version 9.0 (libvintf@8.0)
 
 `keystore2` continues its SIGABRT restart loop, so directly importing the Android 15 framework VINTF tree is not compatible with the current recovery userspace. A recovery-compatible VINTF declaration or newer libvintf userspace is required for further KeyMint/Keystore2 bring-up testing.
 
+### Minimal recovery VINTF test
+
+A recovery-local framework VINTF manifest with meta-version `8.0` is accepted by the current recovery `libvintf@8.0`. With a minimal framework manifest and an `8.0`-inverted `android.system.keystore2` AIDL fragment, `servicemanager` reports:
+
+```text
+getFrameworkHalManifest: Successfully processed VINTF information
+```
+
+This confirms that the Android 15 meta-version `9.0` incompatibility can be avoided with a recovery-compatible minimal VINTF declaration. However, `keystore2` continues to restart with SIGABRT approximately every five seconds after VINTF parsing succeeds. Therefore, the VINTF meta-version mismatch is a real recovery compatibility issue, but it is not the remaining Keystore2 crash cause.
+
 <!-- DT-SECURITY-STACK-END -->
