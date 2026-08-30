@@ -1916,4 +1916,14 @@ Recovery also directly reads `/metadata/vold/metadata_encryption/key/keymaster_k
 
 The TrustKernel types are confirmed present in the compiled recovery policy, but the current generated-context search did not yet locate the corresponding recovery file/property context artifacts. Context packaging must therefore be verified before Build19 may rely on those contexts or remove the proven runtime misc relabel fallback.
 
+### Build19 metadata-encryption access architecture
+
+OrangeFox does not delegate metadata mounting to a separate vold daemon. `partitionmanager.cpp` directly invokes `android::vold::fscrypt_mount_metadata_encrypted()` inside the recovery process.
+
+The linked vold KeyStorage implementation subsequently reads the metadata-encryption KeyMint blob. Hardware AVCs confirm that the caller remains `u:r:recovery:s0` while opening `/metadata/vold/metadata_encryption/key/keymaster_key_blob`, which is labeled `vold_metadata_file`.
+
+This explains the enforcing conflict with the platform `vold_metadata_file` neverallow: the recovery process is directly executing vold metadata-key code even though platform policy reserves that storage to vold/init-related domains.
+
+The enforcing fix therefore requires an architectural recovery-specific solution rather than a device-vendor allow for `recovery -> vold_metadata_file`.
+
 <!-- DT-SECURITY-STACK-END -->
