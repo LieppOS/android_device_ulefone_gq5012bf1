@@ -1746,4 +1746,16 @@ The generated PLATFORM fragment `vendor_ramdisk00` is only 4 bytes, while `vendo
 
 Therefore `out/target/product/gq5012bf1/vendor_boot.img` must never be flashed directly. The authoritative Build18 payload is its `vendor_ramdisk01` recovery fragment, which must be combined with the byte-identical stock PLATFORM fragment and stock DTB when reconstructing the final 64 MiB vendor_boot image.
 
+### Build18 final recovery-fragment packaging verification
+
+The authoritative packaged Build18 recovery fragment is `vendor_ramdisk01` extracted from the generated short vendor_boot.
+
+It is 33571785 bytes, SHA256 `2e0b627d32ad0266aa477d773ad364070d116e9e418f42d7497548ea859f7e3f`, and decodes successfully as a 94239744-byte SVR4 CPIO archive containing 3943 entries.
+
+The packaged security init RC, security setup script, minimal VINTF manifest, and Keystore2 fragment are byte-identical to their device-tree sources. The packaged `init.recovery.mt6878.rc` also contains the device security-RC import.
+
+The packaged setup script retains SHA256 `2cca80809e518a3e4fb4ca0b571e3636f3e30d47fc14860546333dc8446ab7dd`.
+
+This closes the Build18 recovery-fragment packaging gate. The next gate is reconstruction and offline verification of the complete 64 MiB vendor_boot image using the stock PLATFORM fragment and stock DTB.
+
 <!-- DT-SECURITY-STACK-END -->
