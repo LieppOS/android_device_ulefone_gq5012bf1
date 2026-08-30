@@ -1946,4 +1946,16 @@ Forced context generation also proves that all device TrustKernel file contexts 
 
 TrustKernel property contexts are generated correctly in the normal Soong `vendor_property_contexts` intermediate but are not yet present in `recovery/root/vendor_property_contexts`. Property-context packaging remains an unresolved Build19 requirement.
 
+### Build19 proper Keystore2 execution proof
+
+The recovery ramdisk already contains the platform file-context rule for `/system/bin/keystore2`. A live `restorecon` changes the packaged binary from generic `rootfs` to `keystore_exec` successfully.
+
+With that executable label, the recovery-packaged Keystore2 binary runs successfully as `u:r:keystore:s0`, detects TrustKernel KeyMint version 300, completes shared-secret negotiation, and logs `Successfully registered Keystore 2.0 service`.
+
+The remaining dedicated-Keystore-domain AVCs are limited to executing and mapping the rootfs-labeled recovery linker/runtime plus Binder call/transfer interaction with the recovery domain. The Keystore2 executable itself no longer requires a generic-rootfs entrypoint exception.
+
+Device TrustKernel file contexts are now verified through the complete recovery packaging path. `recovery/root/vendor_file_contexts` contains the TrustKernel nodes, RPMB devices, protected storage labels, and physical `/dev/block/sdc1` as `misc_block_device`. The previous runtime misc relabel fallback is therefore obsolete.
+
+Device TrustKernel property contexts are correctly generated and installed into vendor output. The existing `recovery/root/vendor_property_contexts` is an older stale artifact and must be revalidated after the full recovery packaging step.
+
 <!-- DT-SECURITY-STACK-END -->
