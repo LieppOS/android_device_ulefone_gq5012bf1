@@ -1262,4 +1262,36 @@ KeyMint operations fail with the same `0xffff000f`, Keystore2 maps this to `SECU
 
 This verifies that the recovery UI/startup blocker is solved independently from userdata decryption. The current direct decryption blocker is TrustKernel refusing secure-world KeyMint/KPH commands after classifying the recovery environment/device as unverified.
 
+### Android vs recovery TrustKernel verification comparison
+
+A controlled comparison between the working Android boot and the live recovery security stack confirms that the TrustKernel RPMB diagnostic is not the userdata-decryption blocker. Both environments report:
+
+```text
+RPMB: RPMB size is 16777216 Bytes
+RPMB: Reliable Write Sector Count is 64
+Using provisioned key
+Verify RPMB Key failed with 0x7
+Truststore DEFAULT Setup ... Done
+Load Secondary cert success
+```
+
+Despite the same RPMB verification error, Android continues with:
+
+```text
+VERIFY_STATE: 1 TRIAL_STATE: 1
+```
+
+while recovery previously reported:
+
+```text
+VERIFY_STATE: 2 TRIAL_STATE: 0
+Device [Ulefone Armor 29 Pro Thermal mt6878] not verified
+```
+
+Android also runs `tee_check_keybox` as a oneshot service which exits with status 1, yet its TrustKernel deployment properties include `vendor.trustkernel.keybox.deployed=true`, `vendor.trustkernel.attestation_ids.deployed=true`, `vendor.trustkernel.rkp.uploaded=true`, and `vendor.trustkernel.productionline.state=ready`. Therefore the `tee_check_keybox` exit status by itself is not a fatal condition.
+
+The working Android boot exposes `/dev/block/mapper/userdata -> /dev/block/dm-57` and mounts `/data` as F2FS, while recovery does not create the userdata mapper. The decisive TrustKernel divergence is therefore the secure-world verification state, not the shared RPMB diagnostic or the keybox-check process exit code.
+
+The two environments also differ in boot and identity inputs. Recovery exposes `ro.boot.verifiedbootstate=orange`, `ro.boot.mode=recovery`, and `ro.product.model=Armor 29 Pro Thermal`, while the working Android boot exposes `ro.boot.verifiedbootstate=green`, `ro.boot.vbmeta.device_state=locked`, `ro.boot.flash.locked=1`, `ro.boot.veritymode=enforcing`, `ro.boot.mode=normal`, and `ro.product.model=Armor 29 Pro`. Further testing is required to determine which of these inputs drives TrustKernel from `VERIFY_STATE: 1` to `VERIFY_STATE: 2`.
+
 <!-- DT-SECURITY-STACK-END -->
