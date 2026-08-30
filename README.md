@@ -1431,4 +1431,37 @@ Userdata is still not decrypted. Recovery reads `/metadata/vold/metadata_encrypt
 
 This is progress beyond the previous `SECURE_HW_COMMUNICATION_FAILED` condition: the TrustKernel/KeyMint communication path and Keystore2 service are now operational, and the current blocker is acceptance of the existing metadata-encryption KeyMint blob.
 
+### Build17 KeyMint REE version inputs
+
+With TrustKernel verified and Keystore2 operational, metadata-key use reaches TrustKernel KeyMint but returns `INVALID_KEY_BLOB` (`-33`).
+
+The live recovery property service reports:
+
+```text
+ro.build.version.release=14
+ro.build.version.sdk=34
+ro.build.version.security_patch=2024-09-05
+ro.vendor.build.version.release=
+ro.vendor.build.version.sdk=
+ro.vendor.build.security_patch=
+ro.bootimage.build.version.security_patch=
+ro.product.first_api_level=
+ro.vendor.api_level=34
+```
+
+The mounted vendor image itself contains:
+
+```text
+ro.vendor.build.version.release=14
+ro.vendor.build.version.sdk=34
+ro.vendor.build.security_patch=2025-09-05
+ro.product.first_api_level=35
+```
+
+TrustKernel KeyMint startup reports `patchlevel string does not match expected format. Using patchlevel 0`, and secure world reports `WARNING: Unexpected os version from REE`. The subsequent metadata-key operation reaches KeyMint command 16 and returns `INVALID_KEY_BLOB`.
+
+The metadata KeyMint blob is 565 bytes with SHA256 `1eac61edfe777d0c6fa2f2d4f62ec892b6a031b90cb7064e4d6581c0a944fbca`.
+
+Late mounting `/vendor` does not by itself populate the missing vendor properties in the already-running recovery property service. Whether these missing/version-mismatched REE inputs cause `INVALID_KEY_BLOB` remains to be tested.
+
 <!-- DT-SECURITY-STACK-END -->
