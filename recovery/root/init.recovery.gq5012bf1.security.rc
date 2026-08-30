@@ -48,11 +48,11 @@ on boot
     stop keystore2
     stop vendor.boot-default
     start gq5012bf1-security-prep
+    start vendor.boot-default
 
 on property:vendor.trustkernel.fs.state=ready
     restart logd
     start teed
-    start vendor.boot-default
 
 on property:vendor.trustkernel.ready=true
     start vendor.keymint-3-0-trustkernel

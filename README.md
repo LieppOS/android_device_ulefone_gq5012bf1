@@ -2036,4 +2036,12 @@ The recreated artifact is 1382 bytes with SHA256 `ec23a1a236202eaa2a68cfb7129718
 
 Therefore a normal recovery ramdisk packaging build no longer depends on a stale or manually prebuilt `vendor_property_contexts` artifact.
 
+### Build20 BootControl splash-deadlock fix
+
+Build18-to-Build19 artifact comparison found no binary, PLATFORM, DTB, or recovery-composition regression. The boot-relevant regression is that Build19 kept `stop vendor.boot-default` unconditional but gated the corresponding `start vendor.boot-default` behind successful completion of the security-setup script.
+
+Prior hardware testing proved recovery can block at the splash while synchronously waiting for `android.hardware.boot.IBootControl/default`, and restarting only `vendor.boot-default` releases that wait.
+
+Build20 therefore restores `start vendor.boot-default` to the unconditional `on boot` path while keeping security preparation asynchronous and keeping TrustKernel `teed` gated on filesystem readiness.
+
 <!-- DT-SECURITY-STACK-END -->
