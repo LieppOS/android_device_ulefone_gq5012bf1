@@ -1698,4 +1698,14 @@ The stock TrustKernel FBE trigger sets filesystem mode 3 when `ro.crypto.type=fi
 
 The KeyMint and Gatekeeper processes in the successful live recovery were manually launched and therefore ran with the manual shell execution context; their live UID/SELinux identities are not suitable as persistent service definitions.
 
+### Build17 dynamic persistence sources
+
+The working recovery `/etc/task_profiles.json` is byte-identical to the currently active Android system copy at `/mnt/system_a/system/etc/task_profiles.json`: both are 15069 bytes with SHA256 `f230763e7676dfb39397c2d909def41ddd59d73ff7b334718b885ce24095bf21`.
+
+Therefore Build18 can source task profiles dynamically from the active Android system instead of embedding the different 13521-byte recovery-tree version.
+
+Mounted vendor contains dedicated TrustKernel service definitions at `/vendor/etc/init/android.hardware.security.keymint@3.0-service.trustkernel.rc` and `/vendor/etc/init/android.hardware.gatekeeper-service.trustkernel.rc`.
+
+Stable recovery partition names were verified: `/dev/block/by-name/persist`, `protect1`, `metadata`, `userdata`, and `misc`. Active logical system and vendor are available through `/dev/block/mapper/system${ro.boot.slot_suffix}` and `/dev/block/mapper/vendor${ro.boot.slot_suffix}`.
+
 <!-- DT-SECURITY-STACK-END -->
