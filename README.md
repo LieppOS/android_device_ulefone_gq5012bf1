@@ -1872,4 +1872,18 @@ The Android sepolicy build supports `BOARD_VENDOR_SEPOLICY_DIRS`, and recovery-s
 
 Therefore Build19 must add a consumed device vendor-sepolicy directory containing the stock-specific TrustKernel types and contexts rather than granting access to generic `unlabeled`, `device`, or `vendor_default_prop`.
 
+### Build18 stock TrustKernel SELinux contract
+
+Stock vendor SELinux policy defines dedicated TrustKernel device, filesystem, procfs, and property types that are absent from the current recovery policy.
+
+The stock TEE rules are compiled against the versioned platform domain `tee_34_0`; the earlier unversioned grep returning no TEE rules was therefore a search artifact, not an absence of policy.
+
+Stock assigns `/dev/rpmb0` to `teei_rpmb_device` and `/dev/mmcblk0rpmb` plus `/dev/block/mmcblk0rpmb` to the distinct `rpmb_device` type. Stock `teed` is configured with both RPMB candidates, so recovery must reproduce both labels and their TEE permissions.
+
+Stock also defines `tkcore_admin_device`, `tkcore_client_device`, `tkcore_systa_file`, `tkcore_spta_file`, `tkcore_data_file`, `tkcore_protect_data_file`, `tkcore_log_file`, `proc_tkcore`, and `vendor_mtk_trustkernel_tee_prop`. `/proc/tkcore` is labeled through a proc genfscon.
+
+Stock KeyMint and Gatekeeper are allowed to use `tkcore_client_device`; KeyMint additionally reads TrustKernel protected storage. The TEE domain receives the TrustKernel storage, device, RPMB, procfs, and property permissions required by the stock service.
+
+Build19 will reproduce this narrow TrustKernel contract in device vendor sepolicy and will not grant access to generic `device`, `unlabeled`, `vendor_default_prop`, or generic block-device types.
+
 <!-- DT-SECURITY-STACK-END -->
