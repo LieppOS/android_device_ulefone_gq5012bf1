@@ -1337,4 +1337,18 @@ The generated DTB is 342395 bytes with SHA256 `bc156c29c33d8226230f07888df0a3d7a
 
 The full hardware-test image must therefore be reconstructed with the stock PLATFORM fragment, stock-identical DTB, and this fresh recovery fragment.
 
+### Build17 full vendor_boot candidate
+
+The Build17 model-test recovery was reconstructed into a full 67108864-byte vendor_boot image using the verified stock PLATFORM fragment and stock DTB.
+
+```text
+candidate: vendor_boot_a-orangefox-FULL64M-CANDIDATE-v6-model-test.img
+SHA256: 15a840c4b62fc9f49866408b49253913a83db90a21e45e38d86a6cae71e8be1f
+PLATFORM SHA256: 9201a4e5c1b7cb1fc0ce35375af10a3d966dac8b84615a226f98b7d7be2aec00
+RECOVERY SHA256: 0c89d1e82ff0155da3b2f4a76cd132d9ab53b8a89f2b097fa98d7e77e7d2e873
+DTB SHA256: bc156c29c33d8226230f07888df0a3d7a1e9c4b85c5fd550a4c4bd1a3134c0d4
+```
+
+Offline unpacking confirmed the PLATFORM fragment, Build17 recovery fragment, and DTB are each byte-identical to their intended inputs. The AVB hash footer uses partition name `vendor_boot` and the image occupies the exact 64 MiB partition size.
+
 <!-- DT-SECURITY-STACK-END -->
