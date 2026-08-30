@@ -1488,4 +1488,14 @@ TrustKernel KeyMint restarted successfully, but secure world continued to report
 
 After restarting recovery, a fresh metadata-key operation was forced against the restarted KeyMint service. Setting only `ro.vendor.build.security_patch=2025-09-05` removed the KeyMint HAL warning that the patchlevel string was invalid and no longer caused patchlevel 0 to be used. Secure world still reported `WARNING: Unexpected os version from REE`, however, and the fresh metadata-key createOperation still returned `INVALID_KEY_BLOB` (`-33`). Therefore the missing vendor SPL was a real recovery defect but is not sufficient by itself to make the existing metadata KeyMint blob usable.
 
+### Build17 Android-release KeyMint test
+
+After the vendor SPL was corrected to `2025-09-05`, a second controlled test changed only `ro.build.version.release` from recovery Android 14 to the active-system value Android 16, while leaving `ro.build.version.security_patch=2024-09-05` unchanged.
+
+The restarted TrustKernel KeyMint service opened successfully and the previous secure-world warning `Unexpected os version from REE` disappeared. This proves that the recovery Android release value was the source of that warning.
+
+A fresh recovery startup then retried the metadata key against the same restarted KeyMint service. The operation still returned `INVALID_KEY_BLOB` (`-33`), followed by `decryptWithKeystoreKey failed` and `read_key failed in mountFstab`.
+
+Thus both the missing vendor SPL and mismatched Android release are genuine recovery defects, but correcting them is still insufficient to use the existing metadata KeyMint blob. The remaining directly referenced version mismatch is the platform security patch level.
+
 <!-- DT-SECURITY-STACK-END -->
