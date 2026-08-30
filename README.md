@@ -2050,10 +2050,19 @@ Restoring unconditional `start vendor.boot-default` did not resolve the cold-boo
 
 Build21 therefore isolates the remaining boot-time variable by disabling automatic `gq5012bf1-security-prep` startup while retaining the Build19 SELinux/context changes and unconditional BootControl startup.
 
-### Build20 unconditional BootControl hardware result
+### Build20-named artifact source-state correction and live causal proof
 
-Build20 restored unconditional `start vendor.boot-default` while retaining the Build19 security stack.
+The image previously tested under the Build20 artifact name was found on-device to contain the Build21 isolation change: automatic `gq5012bf1-security-prep` startup was disabled. Therefore that boot was not a valid test of unconditional BootControl plus the complete Build19 security stack, and the earlier conclusion attributing its splash hang solely to BootControl gating is withdrawn.
 
-The device still hangs at the OrangeFox splash. Therefore conditional BootControl startup is not sufficient to explain the Build19/Build20 cold-boot regression.
+From the same stuck recovery, manually starting `gq5012bf1-security-prep` completed successfully with exit status 0, set `vendor.trustkernel.fs.state=ready`, mounted the active system/vendor partitions, reconstructed VINTF, and allowed `vendor.boot-default` to register `android.hardware.boot.IBootControl/default` successfully under SELinux enforcing.
+
+The remaining cold-boot blocker was then observed directly: init-launched `teed` entered `u:r:tee:s0` and repeatedly died with signal 11 after an enforcing AVC denied `{ execute }` on recovery `/system/bin/linker64`, which is labelled `rootfs`.
+
+A controlled live test changed only SELinux to permissive and restarted `teed`. TrustKernel immediately raised `vendor.trustkernel.ready=true`; `teed`, TrustKernel KeyMint, Gatekeeper, and the dedicated Keystore2 service all remained running. The same recovery process then left its wait and the OrangeFox menu became visible without restarting recovery.
+
+This proves the security-prep/VINTF/BootControl path is functional and identifies execution of the ramdisk linker by the proper TrustKernel service domains as the remaining enforcing startup blocker. The persistent policy grants only `execute` on recovery `rootfs:file` to the already-authorized `tee`, `hal_keymint_default`, and `hal_gatekeeper_default` domains. The existing dedicated Keystore domain already has the corresponding linker execute permission.
+
+The redundant `restart logd` action is also removed: live init logs showed restarted logd aborting because it attempted to reset the already-established read-only `ro.logd.kernel` property.
+
 
 <!-- DT-SECURITY-STACK-END -->
