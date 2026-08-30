@@ -1480,4 +1480,12 @@ Build17 recovery currently exposes Android 14 / SDK 34 with `ro.build.version.se
 
 This makes REE OS/security-patch identity a concrete candidate for the remaining metadata KeyMint `INVALID_KEY_BLOB` failure.
 
+### Build17 vendor-SPL-only KeyMint test
+
+A live controlled test populated only `ro.vendor.build.security_patch=2025-09-05`, matching the mounted stock vendor image, while keeping recovery at Android 14 with platform SPL `2024-09-05`.
+
+TrustKernel KeyMint restarted successfully, but secure world continued to report `WARNING: Unexpected os version from REE`.
+
+The subsequent `twrp mount /data` command did not trigger a fresh metadata-key KeyMint createOperation; the observed `INVALID_KEY_BLOB` lines were still from the earlier attempt. Therefore this test has not yet established whether vendor SPL alone changes metadata-key acceptance.
+
 <!-- DT-SECURITY-STACK-END -->
