@@ -1294,4 +1294,14 @@ The working Android boot exposes `/dev/block/mapper/userdata -> /dev/block/dm-57
 
 The two environments also differ in boot and identity inputs. Recovery exposes `ro.boot.verifiedbootstate=orange`, `ro.boot.mode=recovery`, and `ro.product.model=Armor 29 Pro Thermal`, while the working Android boot exposes `ro.boot.verifiedbootstate=green`, `ro.boot.vbmeta.device_state=locked`, `ro.boot.flash.locked=1`, `ro.boot.veritymode=enforcing`, `ro.boot.mode=normal`, and `ro.product.model=Armor 29 Pro`. Further testing is required to determine which of these inputs drives TrustKernel from `VERIFY_STATE: 1` to `VERIFY_STATE: 2`.
 
+### Recovery product-model source
+
+The recovery product makefile `twrp_gq5012bf1.mk` explicitly defines:
+
+```make
+PRODUCT_MODEL := Armor 29 Pro Thermal
+```
+
+The working Android userspace reports `ro.product.model=Armor 29 Pro`, while the recovery runtime reports `ro.product.model=Armor 29 Pro Thermal`. A targeted source search found no other non-documentation `Armor 29 Pro Thermal` product-model definition in the device tree. The generated recovery `prop.default` and partition `build.prop` files do not contain a direct top-level `ro.product.model=` assignment, so the makefile product identity remains the controlled source-level variable to test. This does not yet prove that the model string alone determines TrustKernel verification state.
+
 <!-- DT-SECURITY-STACK-END -->
