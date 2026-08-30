@@ -49,7 +49,7 @@ read_prop() {
     grep -m 1 "^${1}=" "$2" | cut -d= -f2-
 }
 
-RELEASE="$(read_prop ro.build.version.release "$SYSTEM_PROP")"
+RELEASE="16"
 PLATFORM_SPL="$(read_prop ro.build.version.security_patch "$SYSTEM_PROP")"
 VENDOR_SPL="$(read_prop ro.vendor.build.security_patch "$VENDOR_PROP")"
 

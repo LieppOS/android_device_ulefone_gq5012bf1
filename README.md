@@ -2075,4 +2075,18 @@ The next enforcing blocker is now directly observed in the TrustKernel HALs: bot
 
 The next policy change adds only the missing HAL-to-recovery Binder call directions for these two verified domains.
 
+### Build23 Android release identity causal proof
+
+Build23 reaches the FBE credential prompt with TrustKernel, BootControl, KeyMint, Gatekeeper and Keystore2 running. Metadata encryption succeeds and `/data` mounts through `/dev/block/mapper/userdata`.
+
+The correct PIN is accepted by Gatekeeper (`Verify invoke command return 0`), but synthetic-password unwrap initially fails because TrustKernel KeyMint returns `-33` / `INVALID_KEY_BLOB` during begin operation.
+
+Runtime inspection proved `ro.build.version.release=14`, while the active Android userdata/key blobs belong to Android 16. The security setup script was incorrectly deriving the release through `read_prop`, resulting in the recovery build release being supplied to KeyMint.
+
+A live test changed only `ro.build.version.release` to `16`, restarted TrustKernel KeyMint and Keystore2, and retried the same PIN. Decryption succeeded. KeyMint proceeded through commands 16, 17 and 18 without `INVALID_KEY_BLOB`.
+
+Therefore Android release 16 is required for the current synthetic-password KeyMint blobs. The recovery security setup now explicitly supplies release 16 together with the already-proven platform SPL 2026-06-01 and vendor SPL 2025-09-05.
+
+The successful permissive decrypt also exposed the exact recovery Keystore2 accesses required by the synthetic-password path: `keystore2 add_auth` and `locksettings_key` `{ get_info use req_forced_op }`. These are added for the next enforcing cold-boot test.
+
 <!-- DT-SECURITY-STACK-END -->
