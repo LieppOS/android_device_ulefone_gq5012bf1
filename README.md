@@ -2044,4 +2044,10 @@ Prior hardware testing proved recovery can block at the splash while synchronous
 
 Build20 therefore restores `start vendor.boot-default` to the unconditional `on boot` path while keeping security preparation asynchronous and keeping TrustKernel `teed` gated on filesystem readiness.
 
+### Build20 BootControl-only test
+
+Restoring unconditional `start vendor.boot-default` did not resolve the cold-boot OrangeFox splash hang. This falsifies BootControl gating as the sole Build19 regression.
+
+Build21 therefore isolates the remaining boot-time variable by disabling automatic `gq5012bf1-security-prep` startup while retaining the Build19 SELinux/context changes and unconditional BootControl startup.
+
 <!-- DT-SECURITY-STACK-END -->

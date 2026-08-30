@@ -47,7 +47,7 @@ service gq5012bf1-keystore2 /system/bin/keystore2 /tmp/misc/keystore
 on boot
     stop keystore2
     stop vendor.boot-default
-    start gq5012bf1-security-prep
+    # Build21 isolation: do not run security prep during recovery startup.
     start vendor.boot-default
 
 on property:vendor.trustkernel.fs.state=ready
