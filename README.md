@@ -1648,4 +1648,22 @@ This proves end-to-end user-0 FBE recovery on hardware: TrustKernel verification
 
 The remaining work is persistence: the currently live-only vendor mounts, TrustKernel services, version properties, VINTF setup, task profiles, device-node permissions/labels, and Gatekeeper startup must be integrated into the recovery image and verified from a cold boot.
 
+### Build17 verified successful live FBE state
+
+The successful live recovery state was captured after full user-0 FBE decryption.
+
+Active security services were TrustKernel `teed`, TrustKernel KeyMint, TrustKernel Gatekeeper, Keystore2, and the MediaTek recovery BootControl HAL.
+
+The KeyMint REE version inputs were `ro.build.version.release=16`, `ro.build.version.security_patch=2026-06-01`, and `ro.vendor.build.security_patch=2025-09-05`.
+
+TrustKernel reported `vendor.trustkernel.ready=true`, filesystem state `ready`, and log state `ready`.
+
+`/vendor` was mounted read-only from `dm-10`; `/mnt/vendor/persist` and `/mnt/vendor/protect_f` were mounted read-write; decrypted userdata `dm-15` was mounted read-write at `/data` with inlinecrypt.
+
+The working device permissions included stock TrustKernel ownership for `/dev/tkcore_admin`, `/dev/tkcore_client`, `/dev/teeperf`, and `/dev/rpmb0`. Physical misc `/dev/block/sdc1` was relabeled `misc_block_device`.
+
+The working recovery VINTF framework consisted of only the minimal framework manifest and Android system Keystore2 fragment. `/etc/task_profiles.json` was present as a 15069-byte mode-0644 root-owned file.
+
+At this point `/data/system_de/0`, `/data/system_ce/0`, and `/data/media/0` were all decrypted and OrangeFox could browse the real user files.
+
 <!-- DT-SECURITY-STACK-END -->
