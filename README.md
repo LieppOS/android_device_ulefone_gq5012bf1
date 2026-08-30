@@ -1018,3 +1018,57 @@ New findings should ideally be classified as one of:
 - **Unknown / needs testing**
 
 Avoid turning guesses into permanent device-tree assumptions without confirming them against either the real device or stock firmware.
+
+<!-- DT-SECURITY-STACK-START -->
+## Hardware-backed security stack
+
+Stock Android confirms that this device uses a TrustKernel-backed AIDL KeyMint stack.
+
+Verified running Binder services:
+
+```text
+android.hardware.security.keymint.IKeyMintDevice/default
+android.hardware.security.keymint.IRemotelyProvisionedComponent/default
+android.hardware.security.secureclock.ISecureClock/default
+android.hardware.security.sharedsecret.ISharedSecret/default
+android.hardware.gatekeeper.IGatekeeper/default
+android.system.keystore2.IKeystoreService/default
+```
+
+Verified running implementations include:
+
+```text
+android.hardware.security.keymint@3.0-service.trustkernel
+android.hardware.gatekeeper-service.trustkernel
+teed
+keystore2
+gatekeeperd
+```
+
+The vendor VINTF manifest selects the TrustKernel implementations for KeyMint and Gatekeeper.
+
+Relevant TEE devices and kernel infrastructure observed on the running system include:
+
+```text
+/dev/trusty-ipc-dev0
+/dev/gz_kree
+/dev/teeperf
+trusty kernel worker threads
+```
+
+`trustkernel.rc` uses persistent TrustKernel storage below:
+
+```text
+/mnt/vendor/protect_f/tee
+```
+
+Stock Android metadata encryption creates:
+
+```text
+/dev/block/mapper/userdata -> /dev/block/dm-57
+```
+
+and mounts that device as F2FS on `/data`.
+
+This confirms that recovery FBE support must interoperate with the device TrustKernel/KeyMint backend rather than relying only on generic Keymaster compatibility libraries.
+<!-- DT-SECURITY-STACK-END -->
