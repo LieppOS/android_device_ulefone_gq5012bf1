@@ -4,6 +4,10 @@ on init
     setprop sys.usb.configfs 1
     setprop sys.usb.controller "11201000.usb0"
 
+    # Main 1080x2400 touchscreen - FocalTech FT3680 on SPI3.
+    # Dependencies are loaded by the stock PLATFORM recovery module list.
+    insmod /lib/modules/focaltech_touch_spi_ft3680.ko
+
 on fs && property:ro.debuggable=0
     # distinguish USB shoulde connect or not, i.e. CDP vs SDP
     # set charging free due to it wait for USB activation
