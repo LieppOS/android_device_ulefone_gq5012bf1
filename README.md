@@ -1322,4 +1322,19 @@ No generated `Armor 29 Pro Thermal` model value remained. This provides a clean 
 
 The model change remains experimental until hardware testing determines whether it changes TrustKernel `VERIFY_STATE`.
 
+### Build17 model-test recovery fragment
+
+The controlled `Armor 29 Pro` model-test build produced a fresh vendor-boot recovery fragment:
+
+```text
+recovery.cpio.lz4: 33570655 bytes
+SHA256: 0c89d1e82ff0155da3b2f4a76cd132d9ab53b8a89f2b097fa98d7e77e7d2e873
+```
+
+The generated vendor-boot image contains a 4-byte type-1 PLATFORM fragment and therefore is not suitable for flashing directly. Its type-2 `recovery` fragment is the Build17 recovery payload.
+
+The generated DTB is 342395 bytes with SHA256 `bc156c29c33d8226230f07888df0a3d7a1e9c4b85c5fd550a4c4bd1a3134c0`, byte-identical to the previously verified stock DTB.
+
+The full hardware-test image must therefore be reconstructed with the stock PLATFORM fragment, stock-identical DTB, and this fresh recovery fragment.
+
 <!-- DT-SECURITY-STACK-END -->
