@@ -1988,4 +1988,16 @@ The complete captured recovery-to-`vold_metadata_file` AVC set contains only dir
 
 Therefore the Android platform-policy carveout can be restricted to recovery-only read access to existing metadata-encryption key material.
 
+### Build19 enforcing metadata policy compiles
+
+The Android platform recovery policy now carries a recovery-only read exception for existing `vold_metadata_file` metadata-encryption key material, matching OrangeFox's in-process use of vold metadata decryption.
+
+The corresponding vold neverallows exclude `recovery` only in recovery-policy builds. The combined `vold_data_file`/`vold_metadata_file` rule was split so recovery gains no access whatsoever to `vold_data_file`.
+
+`sepolicy.recovery` compiles successfully with this architecture.
+
+The generated recovery CIL contains exactly `recovery -> vold_metadata_file:dir search` and `recovery -> vold_metadata_file:file { read getattr open }`. No write, create, setattr, rename, unlink, relabel, or other metadata-key mutation permission is present.
+
+Together with the dedicated `keystore`-domain Keystore2 integration, the two previously identified structural SELinux blockers for enforcing metadata/FBE operation are now compiler-clean.
+
 <!-- DT-SECURITY-STACK-END -->
