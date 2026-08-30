@@ -1151,4 +1151,16 @@ Recovery `keystore2` still crash-loops with `SIGABRT`; its PID changes across th
 
 These are confirmed recovery bring-up blockers; metadata-key unwrap and creation of `/dev/block/mapper/userdata` have not yet succeeded.
 
+### Framework VINTF compatibility
+
+Live recovery testing confirmed that the active Android 15 system framework VINTF manifest is available at `/system/etc/vintf/manifest.xml` when the system partition is mounted manually, but it declares manifest meta-version `9.0`.
+
+The OrangeFox 14.1 recovery userspace currently contains `libvintf@8.0`. After copying the Android 15 VINTF tree into recovery, `servicemanager` changes from reporting a missing framework manifest to rejecting it with:
+
+```text
+Unrecognized manifest.version 9.0 (libvintf@8.0)
+```
+
+`keystore2` continues its SIGABRT restart loop, so directly importing the Android 15 framework VINTF tree is not compatible with the current recovery userspace. A recovery-compatible VINTF declaration or newer libvintf userspace is required for further KeyMint/Keystore2 bring-up testing.
+
 <!-- DT-SECURITY-STACK-END -->
