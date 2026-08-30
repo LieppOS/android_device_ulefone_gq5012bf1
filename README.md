@@ -1351,4 +1351,21 @@ DTB SHA256: bc156c29c33d8226230f07888df0a3d7a1e9c4b85c5fd550a4c4bd1a3134c0d4
 
 Offline unpacking confirmed the PLATFORM fragment, Build17 recovery fragment, and DTB are each byte-identical to their intended inputs. The AVB hash footer uses partition name `vendor_boot` and the image occupies the exact 64 MiB partition size.
 
+### Build17 hardware boot identity
+
+The full Build17 model-test vendor_boot candidate was flashed to `vendor_boot_a` and fetched back byte-identically.
+
+Build17 boots recovery far enough for stable ADB and reports:
+
+```text
+ro.product.brand=Ulefone
+ro.product.model=Armor 29 Pro
+ro.board.platform=mt6878
+ro.boot.verifiedbootstate=orange
+ro.boot.mode=recovery
+ro.boot.slot_suffix=_a
+```
+
+OrangeFox initially remains on its splash screen because the previously proven recovery security-stack fixes are still live-only and have not yet been integrated into the ramdisk. This boot therefore provides the intended controlled TrustKernel experiment: the product model is changed to `Armor 29 Pro` while the recovery and orange verified-boot state remain unchanged.
+
 <!-- DT-SECURITY-STACK-END -->
