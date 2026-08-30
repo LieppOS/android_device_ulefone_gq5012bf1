@@ -163,7 +163,20 @@ TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
 
+# Panel is 1080x2400, density 480 (verified live: `wm size` / `wm density`).
 TW_THEME := portrait_hdpi
+
+# Backlight, verified from the stock vendor_boot DTB:
+#   mtk-leds { compatible = "mediatek,disp-leds";
+#     backlight { label = "lcd-backlight";
+#                 max-brightness  = <0x7ff>;   /* 2047 */
+#                 min-brightness  = <0x4>;
+#                 max-hw-brightness = <0x7ff>; } }
+# The driver behind it (leds-mtk-disp.ko) is in the stock
+# modules.load.recovery list, so the class device exists in recovery.
+TW_MAX_BRIGHTNESS := 2047
+TW_DEFAULT_BRIGHTNESS := 1024
+TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 
 TW_INCLUDE_FASTBOOTD := true
 TW_INCLUDE_REPACKTOOLS := true
