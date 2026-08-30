@@ -1768,4 +1768,22 @@ Unpacking confirms vendor_boot header version 4, 4096-byte pages, stock load off
 
 Component verification is exact: stock PLATFORM SHA256 `9201a4e5c1b7cb1fc0ce35375af10a3d966dac8b84615a226f98b7d7be2aec00`, Build18 recovery SHA256 `2e0b627d32ad0266aa477d773ad364070d116e9e418f42d7497548ea859f7e3f`, and stock DTB SHA256 `bc156c29c33d8226230f07888df0a3d7a1e9c4b85c5fd550a4c4bd1a3134c0d4` all match their unpacked counterparts byte-for-byte.
 
+### Build18 full 64 MiB vendor_boot offline qualification
+
+The final Build18 candidate is exactly 67108864 bytes with SHA256 `0b1ab88fb3a4a3e3fff4071e0410b1c481bd9cd633d1c9a327a82f4801861e01`.
+
+It contains a valid AVB hash footer for partition `vendor_boot`; the AVB-protected original image size is 62685184 bytes.
+
+Unpacking the completed AVB-footed image confirms the exact intended vendor_boot v4 geometry and vendor ramdisk table.
+
+The PLATFORM fragment is byte-identical to stock at 28759822 bytes with SHA256 `9201a4e5c1b7cb1fc0ce35375af10a3d966dac8b84615a226f98b7d7be2aec00`.
+
+The recovery fragment is byte-identical to the authoritative Build18 fragment at 33571785 bytes with SHA256 `2e0b627d32ad0266aa477d773ad364070d116e9e418f42d7497548ea859f7e3f`.
+
+The DTB is byte-identical to stock at 342395 bytes with SHA256 `bc156c29c33d8226230f07888df0a3d7a1e9c4b85c5fd550a4c4bd1a3134c0d4`.
+
+The final recovery fragment still decodes to an SVR4 CPIO containing 3943 entries and contains all Build18 security persistence files.
+
+Build18 is therefore offline-qualified for a controlled `vendor_boot_a` hardware test.
+
 <!-- DT-SECURITY-STACK-END -->
