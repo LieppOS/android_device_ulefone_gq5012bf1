@@ -1606,4 +1606,24 @@ The remaining AVC for `hal_bootctl_default` reading the recovery rootfs `/bin` d
 
 Therefore the required permanent BootControl SELinux fix is to label the physical misc block node `/dev/block/sdc1` as `misc_block_device` in recovery.
 
+### Build17 misc physical-node policy source
+
+The mounted stock vendor SELinux `vendor_file_contexts` already labels `/dev/block/by-name/misc` as `misc_block_device`, but contains no rule for the physical recovery node `/dev/block/sdc1`.
+
+Because the MediaTek BootControl HAL dereferences the by-name symlink and accesses `/dev/block/sdc1`, SELinux evaluates the physical inode context. This explains why the by-name rule alone was insufficient and why live relabeling of `/dev/block/sdc1` fixed BootControl under enforcing SELinux.
+
+The eventual recovery policy must therefore add a physical-node file-context rule for `/dev/block/sdc1`; no additional BootControl block-device allow rule is required because `hal_bootctl_default` already has read/write access to `misc_block_device`.
+
+### Build17 FBE DE/CE split and Gatekeeper blocker
+
+After metadata encryption succeeds, `/dev/block/dm-15` is mounted read-write at `/data` with inlinecrypt.
+
+Device-encrypted user 0 data is readable: `/data/system_de/0` exposes normal plaintext filenames including `accounts_de.db` and `persisted_taskIds.txt`.
+
+Credential-encrypted paths remain locked. `/data/system_ce/0` and `/data/media/0` expose fscrypt ciphertext filenames rather than their normal names.
+
+At this stage recovery continuously waits for `android.hardware.gatekeeper.IGatekeeper/default`. Servicemanager attempts to start the AIDL interface once per second, but init reports that no corresponding interface service is known.
+
+Therefore metadata encryption and DE fscrypt are operational, while user 0 CE decryption is now blocked on Gatekeeper / credential handling.
+
 <!-- DT-SECURITY-STACK-END -->
