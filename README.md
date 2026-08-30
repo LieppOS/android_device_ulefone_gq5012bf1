@@ -1486,6 +1486,6 @@ A live controlled test populated only `ro.vendor.build.security_patch=2025-09-05
 
 TrustKernel KeyMint restarted successfully, but secure world continued to report `WARNING: Unexpected os version from REE`.
 
-The subsequent `twrp mount /data` command did not trigger a fresh metadata-key KeyMint createOperation; the observed `INVALID_KEY_BLOB` lines were still from the earlier attempt. Therefore this test has not yet established whether vendor SPL alone changes metadata-key acceptance.
+After restarting recovery, a fresh metadata-key operation was forced against the restarted KeyMint service. Setting only `ro.vendor.build.security_patch=2025-09-05` removed the KeyMint HAL warning that the patchlevel string was invalid and no longer caused patchlevel 0 to be used. Secure world still reported `WARNING: Unexpected os version from REE`, however, and the fresh metadata-key createOperation still returned `INVALID_KEY_BLOB` (`-33`). Therefore the missing vendor SPL was a real recovery defect but is not sufficient by itself to make the existing metadata KeyMint blob usable.
 
 <!-- DT-SECURITY-STACK-END -->
