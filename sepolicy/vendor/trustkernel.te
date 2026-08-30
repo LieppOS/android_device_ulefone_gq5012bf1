@@ -69,4 +69,8 @@ allow keystore rootfs:file execute;
 # Keystore2 and recovery communicate through the recovery Binder environment.
 binder_call(keystore, recovery)
 binder_call(recovery, keystore)
+
+# Synthetic-password unwrap through recovery Keystore2.
+allow recovery keystore:keystore2 add_auth;
+allow recovery locksettings_key:keystore2_key { get_info use req_forced_op };
 ')
