@@ -1934,4 +1934,16 @@ With SELinux permissive, `/system/bin/keystore2 /tmp/misc/keystore` remains aliv
 
 Unlike the normal init-launched recovery Keystore2, however, this manual probe did not expose Keystore or authorization entries through `service list`. Therefore the dedicated-domain direction is promising but service registration is not yet proven and must be diagnosed before changing the persistent recovery service definition.
 
+### Build19 Keystore domain and context packaging proof
+
+A second live Keystore2 probe resolves the earlier service-registration uncertainty. The recovery-packaged Keystore2 binary remained running as `u:r:keystore:s0`, detected TrustKernel KeyMint version 300, completed shared-secret negotiation, logged `Successfully registered Keystore 2.0 service`, and servicemanager subsequently found `android.system.keystore2.IKeystoreService/default` in the framework VINTF manifest.
+
+The failed `service check` commands were not evidence of registration failure; the recovery image simply does not provide the `service` command.
+
+The remaining dedicated-Keystore-domain AVCs are recovery-environment accesses: rootfs executable/runtime permissions and Binder call/transfer interaction with the recovery-hosted service-manager environment.
+
+Forced context generation also proves that all device TrustKernel file contexts are consumed by the recovery variant and copied into `recovery/root/vendor_file_contexts`, including TrustKernel device nodes, both RPMB types, protected storage, `/vendor/app/t6`, and physical `/dev/block/sdc1` as `misc_block_device`. Therefore the previous runtime misc `chcon` fallback is no longer required.
+
+TrustKernel property contexts are generated correctly in the normal Soong `vendor_property_contexts` intermediate but are not yet present in `recovery/root/vendor_property_contexts`. Property-context packaging remains an unresolved Build19 requirement.
+
 <!-- DT-SECURITY-STACK-END -->
