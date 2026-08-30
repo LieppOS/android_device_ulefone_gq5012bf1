@@ -1239,4 +1239,27 @@ With a recovery-compatible framework VINTF declaration and working `logd` task p
 
 This does not yet mean userdata decryption works. The same session still has no `/dev/block/mapper/userdata`. TrustKernel reports the recovery environment/device as unverified, KeyMint commands fail with `0xffff000f`, Keystore2 reports `SECURE_HW_COMMUNICATION_FAILED`, and recovery logs `decryptWithKeystoreKey failed`. Thus the UI/splash blocker and userdata-decryption blocker are now proven to be separate stages.
 
+### TrustKernel verification gate after successful bring-up
+
+Live recovery testing confirmed that `teed` runs as UID/GID `system:system` with effective capability `SYS_RAWIO` (`CapEff=0x20000`), matching the stock service requirement.
+
+With the stock TrustKernel device-node permissions restored, `teed` reaches:
+
+```text
+vendor.trustkernel.log.state=ready
+vendor.trustkernel.ready=true
+```
+
+The TrustKernel KeyMint V3 service opens its TEE session successfully and registers KeyMint, SecureClock, SharedSecret, and RemotelyProvisionedComponent. `keystore2` remains on a stable PID and successfully registers `android.system.keystore2.IKeystoreService/default`, which removes the previous OrangeFox splash deadlock.
+
+The remaining metadata-decryption failure is downstream of a TrustKernel secure-world verification gate. `tee_check_keybox` exits with status 1 and all of its KPH verification operations fail with `0xffff000f`; it sets the TrustKernel deployment-status properties to false. The kernel repeatedly reports:
+
+```text
+TrustKernel OS running on un-verified devices
+```
+
+KeyMint operations fail with the same `0xffff000f`, Keystore2 maps this to `SECURE_HW_COMMUNICATION_FAILED`, `decryptWithKeystoreKey` fails, and `/dev/block/mapper/userdata` is not created.
+
+This verifies that the recovery UI/startup blocker is solved independently from userdata decryption. The current direct decryption blocker is TrustKernel refusing secure-world KeyMint/KPH commands after classifying the recovery environment/device as unverified.
+
 <!-- DT-SECURITY-STACK-END -->
