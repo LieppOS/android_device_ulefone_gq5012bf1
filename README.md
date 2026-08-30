@@ -1594,4 +1594,16 @@ After this relabel, the restarted `hal_bootctl_default` process no longer produc
 
 One enforcing denial remains for `hal_bootctl_default` reading the recovery rootfs `/bin` directory. BootControl interface registration under this remaining denial still requires explicit verification before adding policy.
 
+### Build17 BootControl enforcing verification
+
+After relabeling physical misc `/dev/block/sdc1` to `u:object_r:misc_block_device:s0`, the MediaTek recovery BootControl HAL was verified fully functional with SELinux enforcing.
+
+The restarted HAL remained in `u:r:hal_bootctl_default:s0`, blocked normally in `binder_thread_read`, registered `android.hardware.boot.IBootControl/default`, and logged `IBootControl AIDL service running...`.
+
+The recovery `bootctl get-current-slot` client returned slot `0` with exit status 0.
+
+The remaining AVC for `hal_bootctl_default` reading the recovery rootfs `/bin` directory is nonfatal and does not prevent BootControl registration or operation. No broad rootfs allow should be added for this diagnostic denial.
+
+Therefore the required permanent BootControl SELinux fix is to label the physical misc block node `/dev/block/sdc1` as `misc_block_device` in recovery.
+
 <!-- DT-SECURITY-STACK-END -->
