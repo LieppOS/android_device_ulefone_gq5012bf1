@@ -1926,4 +1926,12 @@ This explains the enforcing conflict with the platform `vold_metadata_file` neve
 
 The enforcing fix therefore requires an architectural recovery-specific solution rather than a device-vendor allow for `recovery -> vold_metadata_file`.
 
+### Build19 Keystore domain live probe
+
+Recovery provides `/system/bin/runcon`, allowing the packaged recovery Keystore2 binary to be tested directly in the platform `keystore` domain without rebuilding.
+
+With SELinux permissive, `/system/bin/keystore2 /tmp/misc/keystore` remains alive as `u:r:keystore:s0`. The resulting recovery-specific AVC contract includes rootfs `entrypoint`, `execute`, `read`, `getattr`, `open`, and `map` access for the ramdisk-packaged executable/runtime, plus Binder call/transfer access from `keystore` to the recovery domain.
+
+Unlike the normal init-launched recovery Keystore2, however, this manual probe did not expose Keystore or authorization entries through `service list`. Therefore the dedicated-domain direction is promising but service registration is not yet proven and must be diagnosed before changing the persistent recovery service definition.
+
 <!-- DT-SECURITY-STACK-END -->
