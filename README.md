@@ -1558,4 +1558,14 @@ Kernel logs confirm F2FS successfully mounts `dm-15` and reports a valid checkpo
 
 Therefore TrustKernel/KeyMint metadata-key handling and the metadata-encryption mapper are now proven correct. The remaining issue is that OrangeFox does not leave the mapped filesystem mounted at `/data`; subsequent mount orchestration and per-file FBE initialization must be diagnosed separately.
 
+### Build17 /data mount blocked by BootControl HAL
+
+After successfully creating the metadata-decrypted userdata mapper, OrangeFox logs `Mounting metadata-encrypted filesystem:/data` but does not complete the `/data` mount.
+
+The full unfiltered startup sequence shows that immediately after this point recovery synchronously requests `android.hardware.boot.IBootControl/default`. Init starts the MediaTek recovery BootControl service `vendor.boot-default`, but its `hal_bootctl_default` SELinux domain remains enforcing and receives denials while accessing the recovery root filesystem and `/dev/block/sdc1`.
+
+Servicemanager then repeatedly waits for `android.hardware.boot.IBootControl/default` once per second, while the recovery process remains blocked in `futex_wait_queue`.
+
+The decrypted userdata mapper itself is independently proven valid and mountable as F2FS. Therefore the immediate automatic `/data` mount blocker is now the unavailable MediaTek BootControl AIDL service, not metadata encryption or F2FS validity.
+
 <!-- DT-SECURITY-STACK-END -->
