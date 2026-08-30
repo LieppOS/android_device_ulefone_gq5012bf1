@@ -1666,4 +1666,24 @@ The working recovery VINTF framework consisted of only the minimal framework man
 
 At this point `/data/system_de/0`, `/data/system_ce/0`, and `/data/media/0` were all decrypted and OrangeFox could browse the real user files.
 
+### Build17 active-system KeyMint version source
+
+The successful recovery session uses slot `_a`. Dynamic partition `system_a` is mapped as `/dev/block/mapper/system_a -> /dev/block/dm-4` and is mounted read-only at `/mnt/system_a`.
+
+The active Android build properties required by TrustKernel KeyMint are available directly from `/mnt/system_a/system/build.prop`:
+
+```text
+ro.build.version.release=16
+ro.build.version.security_patch=2026-06-01
+```
+
+The vendor-side input is available from mounted `/vendor/build.prop`:
+
+```text
+ro.vendor.build.security_patch=2025-09-05
+ro.product.first_api_level=35
+```
+
+Therefore recovery can derive the KeyMint REE-version tuple dynamically from the currently active Android system and vendor images instead of hardcoding the current Android 16 release or security patch level.
+
 <!-- DT-SECURITY-STACK-END -->
