@@ -1968,4 +1968,14 @@ Live recovery inspection also confirms that `/metadata/vold/metadata_encryption/
 
 Any platform-policy exception must remain recovery-only and read-only; metadata-key mutation must remain forbidden.
 
+### Build19 metadata-key retrieval is non-generating
+
+The recovery metadata-decryption path calls `fscrypt_mount_metadata_encrypted()` with `needs_encrypt=false`, selecting `neverGen()`.
+
+`retrieveOrGenerateKey()` retrieves an existing key with `retrieveKey()`. If the key path does not exist and key generation is disabled, it returns failure instead of generating or storing a replacement key.
+
+This supports a recovery-only read-only SELinux exception for existing `vold_metadata_file` metadata-key material. Creation, replacement, deletion, rename, setattr, and other mutation permissions are not justified.
+
+The Build19 recovery policy also continues to compile successfully after removing the unverified RPMB ioctl range, leaving only ioctl values confirmed from the stock TrustKernel policy.
+
 <!-- DT-SECURITY-STACK-END -->
