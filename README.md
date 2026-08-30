@@ -1730,4 +1730,12 @@ The staged `gq5012bf1-security-setup.sh` has SHA256 `2cca80809e518a3e4fb4ca0b571
 
 This verifies build/staging integration only. Build18 remains unverified on hardware until the final recovery ramdisk is inspected, reconstructed into the stock vendor_boot geometry, and cold-boot tested.
 
+### Build18 recovery ramdisk packaging behavior
+
+During `mka vendorbootimage`, OrangeFox references `out/target/product/gq5012bf1/ramdisk-recovery.img` as the recovery ramdisk input. After the build completes, that top-level intermediate is no longer present.
+
+The retained generated artifact is `out/target/product/gq5012bf1/vendor_boot.img`, approximately 33 MiB. It must not be flashed directly because it is not the required stock-geometry 64 MiB vendor_boot image.
+
+Build18 packaged recovery verification therefore needs to unpack this retained generated vendor_boot and inspect its vendor ramdisk fragment.
+
 <!-- DT-SECURITY-STACK-END -->
