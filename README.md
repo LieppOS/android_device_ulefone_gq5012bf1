@@ -1824,4 +1824,18 @@ With only SELinux changed to permissive, the same init-managed service remains r
 
 After this permissive teed start, OrangeFox advances to its encrypted-data credential prompt. This proves that the second Build18 persistence blocker is the recovery SELinux execution environment for the proper `tee` domain, specifically the linker/rootfs mapping denial observed before any later TrustKernel failure.
 
+### Build18 complete live FBE proof
+
+The first Build18 image has now completed the entire user-0 FBE path using its persistent security-service definitions after bypassing the two identified integration blockers.
+
+After rerunning security preparation once the dynamic system/vendor mappings existed and starting the init-managed TrustKernel stack with SELinux permissive, `teed`, TrustKernel KeyMint, TrustKernel Gatekeeper, Keystore2, and the MediaTek BootControl HAL all remained running.
+
+TrustKernel reported `ready=true`, filesystem state `ready`, and log state `ready`. Metadata encryption created `/dev/block/mapper/userdata -> /dev/block/dm-15`, and recovery mounted that mapper read-write at `/data` as F2FS with inlinecrypt.
+
+OrangeFox displayed its encrypted-data credential prompt. After the correct device credential was entered, TrustKernel Gatekeeper returned successful verification, recovery executed `fscrypt_unlock_ce_storage 0`, loaded `/data/misc/vold/user_keys/ce/0/current`, installed the CE fscrypt key for user 0, and exposed normal credential-encrypted filenames.
+
+`/data/system_ce/0` contains normal files such as `accounts_ce.db`, while `/data/media/0` contains the actual internal-storage tree including `DCIM`, `Documents`, `Download`, `Pictures`, and other user files.
+
+This proves the Build18 payload and service sequence are functionally sufficient for complete metadata, DE, credential verification, and CE decryption. Remaining work is limited to startup ordering and recovery SELinux integration; no further crypto algorithm, KeyMint version, Gatekeeper, RPMB, or metadata-key investigation is required.
+
 <!-- DT-SECURITY-STACK-END -->
