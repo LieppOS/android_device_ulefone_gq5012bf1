@@ -1541,4 +1541,21 @@ Before `fscrypt_mount_metadata_encrypted` creates the mapper, recovery probes th
 
 The on-disk metadata KeyMint blob remains 565 bytes and retains SHA256 `1eac61edfe777d0c6fa2f2d4f62ec892b6a031b90cb7064e4d6581c0a944fbca`, so the logged `Upgrading key` path did not change the observed blob contents.
 
+### Build17 validated decrypted userdata filesystem
+
+The metadata-decrypted userdata mapper was validated independently of OrangeFox mount orchestration.
+
+Raw userdata `/dev/block/sdc76` and decrypted `/dev/block/mapper/userdata` are both 500061667328 bytes. The raw metadata-encrypted device does not contain an F2FS superblock at offset 1024, while the decrypted mapper contains the expected little-endian F2FS magic:
+
+```text
+raw sdc76: 3c bb 74 be
+mapper dm-15: 10 20 f5 f2
+```
+
+Mounting `/dev/block/mapper/userdata` read-only as F2FS succeeds, and the real userdata root is visible with expected Android directories including `data`, `media`, `system`, `user`, `user_de`, `system_ce`, `system_de`, `vendor_ce`, and `vendor_de`.
+
+Kernel logs confirm F2FS successfully mounts `dm-15` and reports a valid checkpoint.
+
+Therefore TrustKernel/KeyMint metadata-key handling and the metadata-encryption mapper are now proven correct. The remaining issue is that OrangeFox does not leave the mapped filesystem mounted at `/data`; subsequent mount orchestration and per-file FBE initialization must be diagnosed separately.
+
 <!-- DT-SECURITY-STACK-END -->
