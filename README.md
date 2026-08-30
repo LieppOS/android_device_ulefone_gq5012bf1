@@ -1802,4 +1802,16 @@ This is a startup-order/timing defect in the Build18 persistence integration, no
 
 The Build18 setup must therefore run asynchronously after recovery begins dynamic-partition setup, rather than synchronously blocking the boot action before `/dev/block/mapper/system_${slot}` exists.
 
+### Build18 late-retry timing proof
+
+During the failed Build18 cold boot, recovery later created `/dev/block/mapper/system_a` and `/dev/block/mapper/vendor_a` while the original security-prep service had already exited.
+
+Rerunning the exact packaged Build18 security setup after those mappings existed succeeded with exit status 0 under a controlled permissive setup window, after which SELinux was restored to enforcing.
+
+The retry mounted active system, vendor, persist, and protect_f and dynamically installed the correct KeyMint inputs: release 16, platform SPL 2026-06-01, and vendor SPL 2025-09-05.
+
+This causally confirms that the first Build18 defect is startup ordering: the security-prep payload itself succeeds once dynamic partition mappings exist.
+
+After the successful retry, however, the init-managed `teed` service entered `restarting` and never raised `vendor.trustkernel.ready=true`. This is a separate persistence blocker and must be diagnosed independently before changing policy or service identity.
+
 <!-- DT-SECURITY-STACK-END -->
