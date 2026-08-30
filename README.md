@@ -1199,4 +1199,20 @@ TEED: error opening [/dev/tkcore_admin]: Permission denied(13)
 
 The recovery-created TrustKernel device nodes are owned as `root:root`, including `/dev/tkcore_admin`, while stock Android exposes `/dev/tkcore_admin` as `system:system`. Stock `teed` is configured to run as `system:system` with `SYS_RAWIO`, so recovery must reproduce the stock device-node ownership/permissions before TrustKernel userspace can initialize. The current TA-load error and `teed not ready` state occur downstream of this failed `/dev/tkcore_admin` open.
 
+### TrustKernel uevent rules and live `teed` behavior
+
+The stock vendor uevent rules define the TrustKernel/RPMB nodes as:
+
+```text
+/dev/teeperf       0660 system system
+/dev/tkcore_admin  0600 system system
+/dev/tkcore_client 0660 root   system
+/dev/tkcore_fp     0660 root   system
+/dev/rpmb0         0660 root   system
+```
+
+The stock storage-proxy init path also changes `/dev/0:0:0:49476` owner to `system`.
+
+A live recovery test changed only `/dev/tkcore_admin` to the stock `system:system 0600` ownership/mode. After that change, stock `teed` no longer exited immediately with status 253 and no longer logged `error opening [/dev/tkcore_admin]: Permission denied(13)`; it remained running in the foreground for more than six minutes until manually interrupted. This verifies that recovery device-node ownership was the first `teed` startup blocker. TrustKernel ready state and downstream KeyMint/Keystore2 operation still require separate validation.
+
 <!-- DT-SECURITY-STACK-END -->
