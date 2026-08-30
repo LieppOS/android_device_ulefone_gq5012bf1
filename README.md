@@ -1414,4 +1414,21 @@ The current Keystore2 blocker is now framework VINTF registration: Keystore2 rea
 
 This proves that the TrustKernel verification failure and resulting secure-hardware communication failure have been resolved; framework VINTF declaration is now the immediate blocker.
 
+### Build17 OrangeFox UI and metadata-key blocker
+
+With TrustKernel verified, KeyMint running, logd stabilized, and the minimal framework VINTF reduced to the two required version-8.0 files, Keystore2 remains stable and registers successfully:
+
+```text
+getFrameworkHalManifest: Successfully processed VINTF information
+Found android.system.keystore2.IKeystoreService/default in framework VINTF manifest.
+Shared secret negotiation concluded successfully.
+Successfully registered Keystore 2.0 service.
+```
+
+Starting Keystore2 at this point immediately allows OrangeFox to leave the splash screen and display its normal UI.
+
+Userdata is still not decrypted. Recovery reads `/metadata/vold/metadata_encryption/key/keymaster_key_blob`, but the Keystore2 createOperation call now returns service-specific error `-33`; AOSP KeyMint defines `-33` as `INVALID_KEY_BLOB`. Recovery then reports `decryptWithKeystoreKey failed` and `read_key failed in mountFstab`, and no `/dev/block/mapper/userdata` is created.
+
+This is progress beyond the previous `SECURE_HW_COMMUNICATION_FAILED` condition: the TrustKernel/KeyMint communication path and Keystore2 service are now operational, and the current blocker is acceptance of the existing metadata-encryption KeyMint blob.
+
 <!-- DT-SECURITY-STACK-END -->
