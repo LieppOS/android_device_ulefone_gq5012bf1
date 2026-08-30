@@ -1187,4 +1187,16 @@ However, the stock-Android vendor support properties `ro.vendor.mtk_trustkernel_
 
 The mounted Android system contains `/system/etc/task_profiles.json`, `/system/etc/cgroups.json`, and versioned task/cgroup profile files under `/system/etc/task_profiles/`. The recovery root currently lacks `/etc/task_profiles.json` while providing its own `/etc/cgroups.json`. This matches the observed recovery `logd` failures to load `/etc/task_profiles.json` and resolve profiles such as `NormalIoPriority`, `HighPerformance`, and `ServiceCapacityLow`; whether this is the direct cause of the `logd` abort remains under live validation.
 
+### Recovery TEE device-node ownership and logging
+
+Live recovery testing confirmed that the stock Android `task_profiles.json` is sufficient to keep recovery `logd` stable. After copying `/system/etc/task_profiles.json` from the mounted Android system into `/etc/task_profiles.json`, the same `logd` PID remained alive for at least 12 seconds and `logcat` became usable. Some newer task-profile actions/controllers remain unsupported by the recovery userspace, but they are non-fatal for logging.
+
+With working `logcat`, manual stock `teed` startup exposed the immediate TrustKernel failure:
+
+```text
+TEED: error opening [/dev/tkcore_admin]: Permission denied(13)
+```
+
+The recovery-created TrustKernel device nodes are owned as `root:root`, including `/dev/tkcore_admin`, while stock Android exposes `/dev/tkcore_admin` as `system:system`. Stock `teed` is configured to run as `system:system` with `SYS_RAWIO`, so recovery must reproduce the stock device-node ownership/permissions before TrustKernel userspace can initialize. The current TA-load error and `teed not ready` state occur downstream of this failed `/dev/tkcore_admin` open.
+
 <!-- DT-SECURITY-STACK-END -->
