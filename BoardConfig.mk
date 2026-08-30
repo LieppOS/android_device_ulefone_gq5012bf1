@@ -178,6 +178,22 @@ TW_MAX_BRIGHTNESS := 2047
 TW_DEFAULT_BRIGHTNESS := 1024
 TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 
+# HW TEST 1 (build 10) finding: the recovery USB gadget enumerated as
+# 18d1:d001 "Ulefone / Armor 29 Pro Thermal" and was then torn down ~2s later,
+# so adbd never became reachable.
+#
+# Cause: two USB stacks fighting for the same UDC.
+#   - stock init.recovery.mt6878.rc  -> setprop sys.usb.configfs 1
+#                                       setprop sys.usb.controller 11201000.usb0
+#     i.e. the modern configfs gadget path in init.rc
+#   - TWRP's init.recovery.usb.rc    -> writes /sys/class/android_usb/android0/*
+#     i.e. the legacy android_usb gadget path
+#
+# Drop the legacy one and keep the stock MediaTek configfs path.
+# bootable/recovery/etc/Android.mk:17 and Android.mk:624 gate the install of
+# init.recovery.usb.rc on exactly this variable.
+TW_EXCLUDE_DEFAULT_USB_INIT := true
+
 TW_INCLUDE_FASTBOOTD := true
 TW_INCLUDE_REPACKTOOLS := true
 TW_INCLUDE_RESETPROP := true
