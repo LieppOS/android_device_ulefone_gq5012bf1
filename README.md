@@ -1498,4 +1498,32 @@ A fresh recovery startup then retried the metadata key against the same restarte
 
 Thus both the missing vendor SPL and mismatched Android release are genuine recovery defects, but correcting them is still insufficient to use the existing metadata KeyMint blob. The remaining directly referenced version mismatch is the platform security patch level.
 
+### Build17 metadata-encryption breakthrough
+
+The final controlled KeyMint REE-version test changed only `ro.build.version.security_patch` from recovery value `2024-09-05` to the active Android value `2026-06-01`, after the previous tests had already established `ro.build.version.release=16` and `ro.vendor.build.security_patch=2025-09-05`.
+
+The resulting KeyMint version tuple was:
+
+```text
+ro.build.version.release=16
+ro.build.version.security_patch=2026-06-01
+ro.vendor.build.security_patch=2025-09-05
+```
+
+TrustKernel KeyMint opened successfully without the previous invalid-patchlevel or unexpected-OS-version warnings. Keystore2 remained stable and registered successfully.
+
+A fresh recovery startup then processed the existing metadata encryption key without the previous `INVALID_KEY_BLOB` (`-33`) failure. Recovery entered its key-upgrade path:
+
+```text
+Upgrading key: /metadata/vold/metadata_encryption/key/keymaster_key_blob
+```
+
+and created the decrypted userdata block mapping:
+
+```text
+/dev/block/mapper/userdata -> /dev/block/dm-15
+```
+
+This proves that, after correcting the vendor SPL and Android release inputs, the remaining platform security-patch mismatch was the decisive blocker preventing the existing metadata KeyMint blob from being accepted. The metadata-encryption device mapper is now created successfully. F2FS `/data` mounting and userspace FBE state still require separate verification.
+
 <!-- DT-SECURITY-STACK-END -->
