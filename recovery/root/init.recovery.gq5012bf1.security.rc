@@ -1,0 +1,53 @@
+service gq5012bf1-security-prep /system/bin/sh /system/bin/gq5012bf1-security-setup.sh
+    class core
+    user root
+    group root
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+service teed /vendor/bin/teed \
+    --tzdev /dev/tkcore_admin \
+    --datapath /data/vendor/t6/fs \
+    --sptapath /data/vendor/t6/app \
+    --systapath /vendor/app/t6 \
+    --rpmbdev /dev/mmcblk0rpmb \
+    --rpmbdev /dev/rpmb0 \
+    --prot /mnt/vendor/persist/t6 \
+    --prot /mnt/vendor/protect_f/tee \
+    --prebuilt /vendor/app/t6/data \
+    --logpath /data/vendor/t6/tkcore.log \
+    --proprefix vendor.trustkernel
+    class core
+    user system
+    group system
+    capabilities SYS_RAWIO
+    disabled
+
+service vendor.keymint-3-0-trustkernel /vendor/bin/hw/android.hardware.security.keymint@3.0-service.trustkernel
+    class early_hal
+    user system
+    group system
+    disabled
+
+service vendor.gatekeeper /vendor/bin/hw/android.hardware.gatekeeper-service.trustkernel
+    class hal
+    user system
+    group system
+    disabled
+
+on boot
+    stop keystore2
+    stop vendor.boot-default
+    exec_start gq5012bf1-security-prep
+    restart logd
+    start teed
+    start vendor.boot-default
+
+on property:vendor.trustkernel.ready=true
+    start vendor.keymint-3-0-trustkernel
+    start vendor.gatekeeper
+
+on property:init.svc.vendor.keymint-3-0-trustkernel=running
+    exec u:r:recovery:s0 root root -- /system/bin/sleep 1
+    start keystore2
