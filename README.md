@@ -1320,7 +1320,7 @@ ro.product.system_ext.model=Armor 29 Pro
 
 No generated `Armor 29 Pro Thermal` model value remained. This provides a clean build for testing whether TrustKernel verification depends on the product model while leaving the actual recovery/verified-boot state unchanged.
 
-The model change remains experimental until hardware testing determines whether it changes TrustKernel `VERIFY_STATE`.
+Hardware testing confirmed that the recovery product model must be `Armor 29 Pro`: with this identity TrustKernel reaches `VERIFY_STATE: 1 TRIAL_STATE: 1` even while recovery remains in the real `orange` verified-boot state.
 
 ### Build17 model-test recovery fragment
 
@@ -1367,5 +1367,33 @@ ro.boot.slot_suffix=_a
 ```
 
 OrangeFox initially remains on its splash screen because the previously proven recovery security-stack fixes are still live-only and have not yet been integrated into the ramdisk. This boot therefore provides the intended controlled TrustKernel experiment: the product model is changed to `Armor 29 Pro` while the recovery and orange verified-boot state remain unchanged.
+
+### Build17 TrustKernel model verification result
+
+Hardware testing confirmed the TrustKernel identity requirement. Build17 booted with:
+
+```text
+ro.product.brand=Ulefone
+ro.product.model=Armor 29 Pro
+ro.board.platform=mt6878
+ro.boot.verifiedbootstate=orange
+ro.boot.mode=recovery
+```
+
+After mounting the active vendor logical partition, restoring the verified stock TrustKernel device-node permissions, mounting persist/protect_f, and starting the stock `teed`, TrustKernel userinit reported:
+
+```text
+ARCH FEATURE = 0x22f1
+Verify RPMB Key failed with 0x7
+Truststore DEFAULT Setup ... Done
+Load Secondary cert success
+VERIFY_STATE: 1 TRIAL_STATE: 1
+```
+
+The same RPMB diagnostic occurs during working Android, so it is not the userdata-decryption blocker.
+
+This controlled test proves that the previous `VERIFY_STATE: 2 TRIAL_STATE: 0` condition was caused by using `Armor 29 Pro Thermal` as the Android product model. The real recovery `orange` verified-boot state is compatible with TrustKernel verification state 1 on this device.
+
+The retail/device documentation name remains Ulefone Armor 29 Pro Thermal, but recovery must expose the Android product model `Armor 29 Pro` for the TrustKernel security stack.
 
 <!-- DT-SECURITY-STACK-END -->
