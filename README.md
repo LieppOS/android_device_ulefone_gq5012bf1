@@ -2075,18 +2075,27 @@ The next enforcing blocker is now directly observed in the TrustKernel HALs: bot
 
 The next policy change adds only the missing HAL-to-recovery Binder call directions for these two verified domains.
 
-### Build23 Android release identity causal proof
+### Build23/Build24 TrustKernel split release identity causal proof
 
-Build23 reaches the FBE credential prompt with TrustKernel, BootControl, KeyMint, Gatekeeper and Keystore2 running. Metadata encryption succeeds and `/data` mounts through `/dev/block/mapper/userdata`.
+Build23 and Build24 establish that TrustKernel Gatekeeper and KeyMint require different Android release identities during initialization on this recovery stack.
 
-The correct PIN is accepted by Gatekeeper (`Verify invoke command return 0`), but synthetic-password unwrap initially fails because TrustKernel KeyMint returns `-33` / `INVALID_KEY_BLOB` during begin operation.
+The correct PIN is accepted when Gatekeeper initializes while `ro.build.version.release=14`. If Gatekeeper is initialized after forcing release 16, `GatekeeperHAL` returns `Verify invoke command return -1` and Keystore2 reports `KEY_USER_NOT_AUTHENTICATED`.
 
-Runtime inspection proved `ro.build.version.release=14`, while the active Android userdata/key blobs belong to Android 16. The security setup script was incorrectly deriving the release through `read_prop`, resulting in the recovery build release being supplied to KeyMint.
+Conversely, the Android 16 synthetic-password KeyMint blob fails when KeyMint initializes with release 14: TrustKernel returns `-33` and Keystore2 reports `INVALID_KEY_BLOB`.
 
-A live test changed only `ro.build.version.release` to `16`, restarted TrustKernel KeyMint and Keystore2, and retried the same PIN. Decryption succeeded. KeyMint proceeded through commands 16, 17 and 18 without `INVALID_KEY_BLOB`.
+The exact live sequence that decrypts successfully under enforcing is:
 
-Therefore Android release 16 is required for the current synthetic-password KeyMint blobs. The recovery security setup now explicitly supplies release 16 together with the already-proven platform SPL 2026-06-01 and vendor SPL 2025-09-05.
+1. Keep `ro.build.version.release=14`.
+2. Start TrustKernel Gatekeeper and allow it to initialize.
+3. Change `ro.build.version.release` to `16`.
+4. Start TrustKernel KeyMint.
+5. Start Keystore2 with `/tmp/misc/keystore` labelled `keystore_data_file`.
+6. Enter the same PIN; synthetic-password unwrap succeeds.
 
-The successful permissive decrypt also exposed the exact recovery Keystore2 accesses required by the synthetic-password path: `keystore2 add_auth` and `locksettings_key` `{ get_info use req_forced_op }`. These are added for the next enforcing cold-boot test.
+The platform SPL remains `2026-06-01` and vendor SPL remains `2025-09-05`.
+
+Build24 also proved that the temporary copied Keystore database must not retain the generic `tmpfs` label. When `/tmp/misc/keystore/persistent.sqlite` is `tmpfs`, enforcing SELinux denies Keystore2 `getattr`, SQLite cannot attach the persistent database, Keystore2 aborts, and recovery receives `DEAD_OBJECT`. The device policy therefore labels `/tmp/misc/keystore(/.*)?` as `keystore_data_file` and init restores that context before starting Keystore2.
+
+The previously proven recovery Keystore2 permissions for `add_auth` and `locksettings_key` remain required.
 
 <!-- DT-SECURITY-STACK-END -->
