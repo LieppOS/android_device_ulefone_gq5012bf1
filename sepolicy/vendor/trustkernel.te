@@ -1,8 +1,39 @@
-recovery_only(`
-# Recovery executables/libraries are ramdisk rootfs objects.
-allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:dir r_dir_perms;
-allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:file r_file_perms;
-allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:file execute;
+# TrustKernel (TEEI/tkcore) policy for GQ5012BF1.
+#
+# This file is compiled into BOTH the recovery policy and the full-ROM vendor
+# policy, because BOARD_VENDOR_SEPOLICY_DIRS in BoardConfig.mk is not guarded
+# by TARGET_PRODUCT. file.te and file_contexts are likewise unconditional, so
+# every tkcore device, RPMB node and protected-storage root is labelled in both
+# builds.
+#
+# Everything below used to sit inside a single recovery_only() block. That gave
+# the full ROM correctly labelled TrustKernel objects and zero allow rules --
+# teed, KeyMint and Gatekeeper would have been denied access to their own
+# devices and stores under enforcing. The rules are therefore split by the
+# reason they exist:
+#
+#   COMMON         the TrustKernel hardware/storage contract. Identical on
+#                  stock Android and in recovery, because it describes the
+#                  device nodes and persistent stores teed owns either way.
+#   RECOVERY_ONLY  artifacts of the recovery environment: the linker and
+#                  runtime live on ramdisk rootfs, recovery itself hosts the
+#                  Keystore2 client, and the FBE unlock is driven by the
+#                  `recovery` domain instead of vold/system_server.
+#   ROM_ONLY       deliberately empty. On normal Android the corresponding
+#                  clients are vold, system_server and gatekeeperd, and AOSP
+#                  core policy already grants those paths. No device-specific
+#                  ROM rule has been justified by evidence, and none is
+#                  invented here.
+#
+# Domains are the stock ones and must stay that way:
+#   teed        u:r:tee:s0
+#   KeyMint     u:r:hal_keymint_default:s0
+#   Gatekeeper  u:r:hal_gatekeeper_default:s0
+#   Keystore2   u:r:keystore:s0
+
+# =====================================================================
+# COMMON -- required by both normal Android and recovery
+# =====================================================================
 
 # Stock TrustKernel devices and RPMB candidates.
 allow tee tkcore_admin_device:chr_file rw_file_perms;
@@ -23,15 +54,25 @@ allow tee tkcore_data_file:file map;
 allow tee tkcore_protect_data_file:dir create_dir_perms;
 allow tee tkcore_protect_data_file:file create_file_perms;
 allow tee tkcore_protect_data_file:file map;
+
 # TrustKernel commits persistent objects by hard-linking the staged block file
 # (observed: denied { link } on "block0.1"). create_file_perms in this AOSP
 # version is { create rename setattr unlink rw_file_perms } and excludes link.
+# This is not redundant. Do not delete it.
+#
+# The commit path is a property of TrustKernel itself, not of recovery, so the
+# rule has to apply to the full ROM as well or persistent-object commits fail
+# there in exactly the same way they failed in recovery before cedb65b.
 allow tee tkcore_protect_data_file:file link;
 
 # teed must traverse the two --prot mount roots to reach its stores. Search
 # only; the payload directories keep their own tkcore_protect_data_file label.
+# /mnt/vendor/persist and /mnt/vendor/protect_f must resolve to these real
+# types and never to unlabeled.
 allow tee persist_data_file:dir search;
 allow tee protect_f_data_file:dir search;
+
+# System TAs shipped in /vendor/app/t6, and the writable SP-TA/log stores.
 allow tee tkcore_systa_file:dir r_dir_perms;
 allow tee tkcore_systa_file:file r_file_perms;
 allow tee tkcore_systa_file:file map;
@@ -46,14 +87,30 @@ allow tee proc_tkcore:dir search;
 allow tee proc_tkcore:file rw_file_perms;
 allow tee proc_tkcore:file map;
 set_prop(tee, vendor_mtk_trustkernel_tee_prop)
-set_prop(recovery, vendor_mtk_trustkernel_tee_prop)
 
-# TrustKernel KeyMint and Gatekeeper.
+# TrustKernel KeyMint and Gatekeeper reach the TEE through the same client
+# device node and read the same protected store on both targets.
 allow hal_keymint_default tkcore_client_device:chr_file rw_file_perms;
 allow hal_keymint_default tkcore_protect_data_file:dir search;
 allow hal_keymint_default tkcore_protect_data_file:file r_file_perms;
 allow hal_keymint_default tkcore_protect_data_file:file map;
 allow hal_gatekeeper_default tkcore_client_device:chr_file rw_file_perms;
+
+# =====================================================================
+# RECOVERY_ONLY -- consequences of the recovery runtime environment
+# =====================================================================
+
+recovery_only(`
+# Recovery executables/libraries are ramdisk rootfs objects. On normal Android
+# these domains execute out of /system and /vendor with their own labels, so
+# granting rootfs there would be a pointless widening.
+allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:dir r_dir_perms;
+allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:file r_file_perms;
+allow { tee hal_keymint_default hal_gatekeeper_default } rootfs:file execute;
+
+# The recovery domain drives the unlock; on Android this is vold and
+# system_server, which AOSP core policy already covers.
+set_prop(recovery, vendor_mtk_trustkernel_tee_prop)
 
 # Recovery hosts Keystore2 and is the FBE client.
 binder_call(recovery, recovery)
@@ -83,3 +140,7 @@ binder_call(recovery, keystore)
 allow recovery keystore:keystore2 add_auth;
 allow recovery locksettings_key:keystore2_key { get_info use req_forced_op };
 ')
+
+# =====================================================================
+# ROM_ONLY -- intentionally empty; see the header.
+# =====================================================================
