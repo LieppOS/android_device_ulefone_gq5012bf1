@@ -568,6 +568,8 @@ vendor/lib64/android.hardware.audio@7.0.so # hardware-facing ELF
 vendor/lib64/android.hardware.audio@7.1-util.so # hardware-facing ELF
 vendor/lib64/android.hardware.audio@7.1.so # hardware-facing ELF
 vendor/lib64/android.hardware.biometrics.common-V3-ndk.so # DT_NEEDED by vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so
+vendor/lib64/android.hardware.biometrics.common.thread.so # provided by an AOSP module; see aosp-replaced-files.txt
+vendor/lib64/android.hardware.biometrics.common.util.so # provided by an AOSP module; see aosp-replaced-files.txt
 vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so # hardware-facing ELF
 vendor/lib64/android.hardware.bluetooth-V1-ndk.so # hardware-facing ELF
 vendor/lib64/android.hardware.bluetooth.audio-V3-ndk.so # hardware-facing ELF
@@ -925,9 +927,14 @@ vendor/lib64/libcameracustom.so # hardware-facing ELF
 vendor/lib64/libcameracustom_camera_db_ext.so # hardware-facing ELF
 vendor/lib64/libccci_util.so # DT_NEEDED by vendor/bin/ccci_mdinit
 vendor/lib64/libcodec2_fsr.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
+vendor/lib64/libcodec2_hidl@1.0.so # provided by an AOSP module; see aosp-replaced-files.txt
+vendor/lib64/libcodec2_hidl@1.1.so # provided by an AOSP module; see aosp-replaced-files.txt
+vendor/lib64/libcodec2_hidl@1.2.so # provided by an AOSP module; see aosp-replaced-files.txt
+vendor/lib64/libcodec2_hidl_plugin.so # provided by an AOSP module; see aosp-replaced-files.txt
 vendor/lib64/libcodec2_mtk_c2store.so # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
 vendor/lib64/libcodec2_mtk_vdec.so # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
 vendor/lib64/libcodec2_mtk_venc.so # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
+vendor/lib64/libcodec2_soft_common.so # provided by an AOSP module; see aosp-replaced-files.txt
 vendor/lib64/libcodec2_vpp_fa_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_venc.so
 vendor/lib64/libcodec2_vpp_mi_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
 vendor/lib64/libcodec2_vpp_qt_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so

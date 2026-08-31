@@ -56,6 +56,11 @@ def main() -> int:
     parser.add_argument("--device", type=Path, required=True)
     parser.add_argument("--inventory", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--stock-partitions", type=Path, default=None,
+                        help="extracted stock partition root; enables the ELF "
+                             "runtime dependency closure check")
+    parser.add_argument("--snapshot", type=Path, action="append", default=[],
+                        help="live snapshot directory; may be repeated")
     args = parser.parse_args()
     device = args.device.resolve()
     metadata = load(args.inventory / "metadata.json")
@@ -89,6 +94,77 @@ def main() -> int:
     check("trustkernel-link", "tkcore_protect_data_file:file link" in policy, "TrustKernel persistent-object hard-link permission retained")
     check("usb-configfs", "TW_EXCLUDE_DEFAULT_USB_INIT := true" in board and "11201000.usb0" in text(device / "recovery/root/init.recovery.mt6878.rc"), "recovery configfs USB invariant retained")
     check("bootcontrol-misc", "/dev/block/sdc1" in text(device / "sepolicy/vendor/file_contexts") and "misc_block_device" in text(device / "sepolicy/vendor/file_contexts"), "physical misc inode labeling retained")
+
+    # DT-SEC-001. BOARD_VENDOR_SEPOLICY_DIRS is not product-guarded, so the
+    # TrustKernel labels exist in the full-ROM policy too. If the matching
+    # allow rules are all inside recovery_only(), the ROM gets labelled
+    # objects and no permissions, which breaks teed/KeyMint/Gatekeeper under
+    # enforcing. Verify the hardware/storage contract is unconditional.
+    def outside_recovery_only(body: str) -> str:
+        depth_removed = re.sub(r"recovery_only\(`.*?'\)", "", body, flags=re.S)
+        return depth_removed
+
+    common_policy = outside_recovery_only(policy)
+    rom_scoped = all(
+        marker in common_policy
+        for marker in (
+            "tkcore_protect_data_file:file link",
+            "tkcore_client_device:chr_file",
+            "persist_data_file:dir search",
+            "protect_f_data_file:dir search",
+            "hal_keymint_default tkcore_client_device",
+            "hal_gatekeeper_default tkcore_client_device",
+        )
+    )
+    check("trustkernel-rom-scope", rom_scoped,
+          "TrustKernel device/storage contract is shared with the full ROM, "
+          "not trapped inside recovery_only()")
+
+    # DT-EVID-001. The live stock snapshot was captured under KernelSU with a
+    # property-spoofing module. Nothing derived from it may end up in the tree.
+    # Scope to the tree itself. `.work/` is the analysis workspace and holds
+    # extracted stock build.prop files, which legitimately contain the empty
+    # _for_attestation keys; matching those would be a false positive.
+    def in_tree(path: Path) -> bool:
+        relative = path.relative_to(device).as_posix()
+        return not relative.startswith((".work/", ".git/", "__pycache__/"))
+
+    tree_sources = [
+        path for pattern in ("*.mk", "*.prop", "*.rc", "*.sh")
+        for path in device.rglob(pattern) if in_tree(path)
+    ]
+    spoofed = sorted(
+        path.relative_to(device).as_posix() for path in tree_sources
+        if "_for_attestation" in text(path))
+    check("no-spoofed-attestation", not spoofed,
+          "no spoofed ro.product.*_for_attestation identity carried into the tree"
+          if not spoofed else
+          f"spoofed attestation identity present in {', '.join(spoofed)}")
+
+    for snapshot in args.snapshot:
+        marker = snapshot / "TRUST.md"
+        checks.append(Check(
+            f"snapshot-trust:{snapshot.name}",
+            "PASS" if marker.is_file() else "WARN",
+            "trust limitations recorded in TRUST.md" if marker.is_file()
+            else "live snapshot has no TRUST.md; run tools/snapshot_trust.py"))
+
+    # DT-ELF-001. "Every listed path exists in stock" is a much weaker property
+    # than "the runtime dependency graph is closed". Enforce the latter.
+    if args.stock_partitions:
+        import subprocess
+        closure = subprocess.run(
+            [os.sys.executable, str(device / "tools/elf_closure.py"),
+             "--device", str(device),
+             "--stock", str(args.stock_partitions),
+             "--aosp-source", str(device.parents[2]),
+             "--check"],
+            capture_output=True, text=True)
+        unresolved = re.search(r"REQUIRED_STOCK_BLOB\s+(\d+)", closure.stdout)
+        count = int(unresolved.group(1)) if unresolved else 0
+        check("elf-closure", closure.returncode == 0,
+              f"{count} unresolved required proprietary dependencies"
+              if count else "runtime dependency graph is closed")
 
     manifest_docs = [doc for doc in vintf["documents"] if "manifest" in doc["path"] and doc["partition"] in {"vendor", "odm"}]
     accounted_docs = [doc for doc in manifest_docs if f"{doc['partition']}/{doc['path']}" in entries]
