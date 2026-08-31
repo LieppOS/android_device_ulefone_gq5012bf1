@@ -2098,4 +2098,30 @@ Build24 also proved that the temporary copied Keystore database must not retain 
 
 The previously proven recovery Keystore2 permissions for `add_auth` and `locksettings_key` remain required.
 
+### Build27 stock TrustKernel HAL binary audit
+
+The stock TrustKernel HAL binaries captured in `gq5012bf1-artifacts/stock-security` were audited directly instead of inferring behaviour from return codes.
+
+The KeyMint HAL `android.hardware.security.keymint@3.0-service.trustkernel` reads exactly these identity inputs and passes them to the trusted application: `ro.build.version.release`, `ro.build.version.security_patch`, `ro.vendor.build.security_patch`, `ro.boot.verifiedbootstate`, `ro.boot.vbmeta.device_state`, `ro.boot.vbmeta.digest`, and `ro.product.{model,brand,device,manufacturer,name,board}`. Its embedded sources are `vendor/mediatek/proprietary/trustzone/trustkernel/source/common/services/keymint/common/src/TrustKernelKeyMintImplementation.cpp` and AOSP `system/keymaster/ng/KeyMintUtils.cpp`.
+
+Because the HAL links the AOSP KeyMint utilities, the trusted application status is a standard AOSP `ErrorCode`. `TEE return -33` is therefore exactly `ErrorCode::INVALID_KEY_BLOB`, and `-26` is `KEY_USER_NOT_AUTHENTICATED`. The key blob is rejected by the trusted application itself, not by the HAL, binder, or SELinux.
+
+### Build27 Gatekeeper consumes no build identity
+
+The stock Gatekeeper HAL `android.hardware.gatekeeper-service.trustkernel` contains no `ro.`, `vendor.` or `persist.` property string of any kind. It is a thin GlobalPlatform client using only `TEEC_InitializeContext`, `TEEC_OpenSession`, `TEEC_InvokeCommand` and `TEEC_CloseSession`, with source `vendor/mediatek/proprietary/trustzone/trustkernel/source/common/services/gatekeeper_service/service.cpp`.
+
+Gatekeeper therefore cannot consume `ro.build.version.release`. The Build25 split-identity assumption that Gatekeeper must initialize under Android 14 has no mechanism in the implementation and is withdrawn.
+
+The HAL also distinguishes two separate log strings. `Verify invoke command failed with 0x%08x, orig 0x%08x` reports a failed `TEEC_InvokeCommand`, whereas `Verify invoke command return %d` reports the status returned by a trusted application that ran successfully. The observed `Verify invoke command return -1` is therefore `ERROR_GENERAL_FAILURE` from the trusted application, which makes recovery abort in `Decrypt_User_Synth_Pass` before KeyMint is ever reached.
+
+### Build27 stock TrustKernel filesystem-state protocol
+
+The stock `trustkernel.rc` uses a two-stage protocol that the device recovery integration does not honour. Stock sets `vendor.trustkernel.fs.state` to `prepare`, and only after creating `/data/vendor/t6`, `/data/vendor/t6/fs` and `/data/vendor/t6/app` does it set the state to `ready`.
+
+`teed` is started with `--datapath /data/vendor/t6/fs` and `--sptapath /data/vendor/t6/app`, so TrustKernel secure file storage lives on `/data`. Stock only declares `ready` once `/data` is decrypted and those directories exist.
+
+The recovery `gq5012bf1-security-setup.sh` skips `prepare` and sets `vendor.trustkernel.fs.mode 3` and `vendor.trustkernel.fs.state ready` directly, while `/data` is still encrypted and unmounted. This declares secure storage ready when it is not, and matches the repeatedly observed `CreatePersistentObject failed with 0xf0100003`, which is `TEE_ERROR_STORAGE_NOT_AVAILABLE`, together with the Gatekeeper `GetRTCBaseline` and `WriteFailureRecord` errors.
+
+This also explains why a late manual sequence succeeded while a cold boot with the same Linux service order failed. The late attempt ran after `/data` was mounted, so `/data/vendor/t6/fs` was genuine secure storage, whereas a cold boot brings the entire TrustKernel stack up before `/data` exists. The observed `userinit already done` confirms trusted-application initialization is once per secure-world lifetime and is not repeated by restarting the Linux HALs.
+
 <!-- DT-SECURITY-STACK-END -->

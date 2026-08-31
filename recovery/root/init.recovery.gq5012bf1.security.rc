@@ -44,30 +44,29 @@ service gq5012bf1-keystore2 /system/bin/keystore2 /tmp/misc/keystore
     seclabel u:r:keystore:s0
     disabled
 
+# ISOLATION BUILD - discriminating test, not a candidate fix.
+#
+# No TrustKernel service starts automatically. teed, Gatekeeper, KeyMint and
+# Keystore2 are driven manually over ADB exactly once, from a truly clean cold
+# boot, after recovery has mounted metadata-encrypted /data. This separates:
+#   H1 - TEE secure storage (/data/vendor/t6/fs) unavailable because we declare
+#        vendor.trustkernel.fs.state=ready before /data exists, and
+#   H2 - KeyMint latching ro.build.version.release once per TA lifetime.
+# See CLAUDE_FBE_REPORT.md. The previous Gatekeeper-14/KeyMint-16 split is
+# removed here: the Gatekeeper HAL binary reads no build property at all.
 on boot
     stop keystore2
     stop vendor.boot-default
     start gq5012bf1-security-prep
-
-on property:vendor.trustkernel.fs.state=ready
-    start teed
+    # BootControl must stay unconditional; recovery otherwise blocks on
+    # IBootControl at the splash logo (commit 078db47).
     start vendor.boot-default
 
-on property:vendor.trustkernel.ready=true
-    # Gatekeeper must initialize with the recovery Android 14 identity.
-    start vendor.gatekeeper
-
-on property:init.svc.vendor.gatekeeper=running
-    # TrustKernel Gatekeeper has consumed Android 14. KeyMint requires the
-    # Android 16 identity used to create the active synthetic-password blobs.
-    exec u:r:recovery:s0 root root -- /system/bin/sleep 2
-    exec u:r:recovery:s0 root root -- /sbin/resetprop ro.build.version.release 16
-    start vendor.keymint-3-0-trustkernel
-
-on property:init.svc.vendor.keymint-3-0-trustkernel=running
-    exec u:r:recovery:s0 root root -- /system/bin/sleep 1
+# Prepare the Keystore2 temp DB directory only. This starts no service, so it
+# does not contaminate the test, and keeps the already-proven DB labelling out
+# of the manual sequence.
+on property:vendor.trustkernel.fs.state=ready
     mkdir /tmp/misc 0755 root root
     mkdir /tmp/misc/keystore 0755 root root
     restorecon_recursive /tmp/misc/keystore
     restorecon /system/bin/keystore2
-    start gq5012bf1-keystore2
