@@ -109,17 +109,11 @@ ever traced to them.
 
 ## 4. Build environment hazards
 
-- [ ] **`PRODUCT_SHIPPING_API_LEVEL := 35` in `device.mk` breaks the recovery
-      build.** It conflicts with `BOARD_SYSTEMSDK_VERSIONS (34)`:
-
-      ```text
-      config.mk:865: error: BOARD_SYSTEMSDK_VERSIONS (34) must all be greater
-      than or equal to ... PRODUCT_SHIPPING_API_LEVEL (35).
-      ```
-
-      This arrived with the ROM work. The established pattern for exactly this
-      split is the `ifeq ($(filter twrp_%,$(TARGET_PRODUCT)),)` guard already
-      used around `BoardConfigRom.mk`.
+- [x] **The former `PRODUCT_SHIPPING_API_LEVEL := 35` recovery-build conflict
+  is resolved.** The production device tree no longer sets that value and
+  Build36 compiled successfully. If parallel ROM work adds it again, keep it
+  outside recovery products with the same `twrp_%` guard used around
+  `BoardConfigRom.mk`.
 
 - **`.work/` must stay pruned from soong.** Inventory tooling clones
   `erofs-utils` there. The path is gitignored, but soong does not read
