@@ -1,1 +1,36 @@
 genfscon proc /tkcore u:object_r:proc_tkcore:s0
+
+# Battery / charger power_supply nodes.
+#
+# The health HAL enumerates /sys/class/power_supply/* and reads each node's
+# "type" file to locate the battery. Those files are generic sysfs, so
+# hal_health_default was denied reading them:
+#
+#   avc: denied { read } for name="type" dev="sysfs"
+#     scontext=u:r:hal_health_default:s0 tcontext=u:object_r:sysfs:s0
+#     tclass=file permissive=0
+#
+# healthd then logged "No battery devices found" and getCapacity() failed, so
+# recovery fell back to "Using fake battery capacity 100".
+#
+# hal_health.te already grants r_dir_file(hal_health_server, sysfs_batteryinfo),
+# so labelling these nodes is sufficient and no new allow rule is needed.
+#
+# /sys/class/power_supply/* are symlinks, and SELinux labels the target inodes,
+# so each real device path is listed individually rather than labelling a broad
+# sysfs prefix.
+genfscon sysfs /class/power_supply u:object_r:sysfs_batteryinfo:s0
+
+# battery (mt6375 fuel gauge) - capacity, status, temp, voltage_now, current_now
+genfscon sysfs /devices/platform/soc/11280000.i2c/i2c-5/5-0034/11280000.i2c:mt6375@34:mtk-gauge/power_supply u:object_r:sysfs_batteryinfo:s0
+# primary_chg (type=USB) - charger online state
+genfscon sysfs /devices/platform/soc/11280000.i2c/i2c-5/5-0034/11280000.i2c:mt6375@34:chg/power_supply u:object_r:sysfs_batteryinfo:s0
+# 3rd-gauge (secondary fuel gauge, type=Battery)
+genfscon sysfs /devices/platform/soc/11c24000.i2c/i2c-9/9-0055/power_supply u:object_r:sysfs_batteryinfo:s0
+# mtk charger family (master/slave, divider/hvdivider)
+genfscon sysfs /devices/platform/charger/power_supply u:object_r:sysfs_batteryinfo:s0
+# mtk-gauge (virtual)
+genfscon sysfs /devices/virtual/power_supply u:object_r:sysfs_batteryinfo:s0
+# sc-cp master/slave charge pumps (type=Mains)
+genfscon sysfs /devices/platform/soc/11d71000.i2c/i2c-11/11-0066/power_supply u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/soc/11e01000.i2c/i2c-6/6-0067/power_supply u:object_r:sysfs_batteryinfo:s0
