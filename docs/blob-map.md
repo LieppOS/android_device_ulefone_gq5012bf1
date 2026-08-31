@@ -1,9 +1,9 @@
 # Proprietary blob map
 
-## Initial reproducible set
+## Reproducible set
 
-`proprietary-files.txt` contains 1,814 evidence-selected entries across system,
-system_ext, product, vendor and vendor_dlkm. It is generated from:
+`proprietary-files.txt` contains 1,891 evidence-selected stock paths across
+system, system_ext, product, vendor and vendor_dlkm. It is generated from:
 
 - every stock vendor/odm VINTF manifest;
 - every present vendor/odm init executable;
@@ -29,11 +29,19 @@ missing files**. The generated proprietary payload is approximately 1 GB.
   silently promoted to an installed system app.
 - No binary fixup is currently applied because evidence has not justified one.
   `extract-files.py` provides a path-scoped fixup hook for future proven needs.
-- Strict build-graph analysis found 198 stock paths already produced by AOSP
-  modules. They remain accounted in `proprietary-files.txt`, are explicitly
-  listed in `aosp-replaced-files.txt`, and are not duplicated into the generated
-  vendor package. This records intentional shared-platform inheritance instead
-  of relying on duplicate-rule ordering.
+- Strict build-graph analysis found 205 stock paths produced by AOSP modules:
+  all 198 original replacements remain, and seven vendor-available biometrics /
+  codec2 libraries were reclassified after exact Soong module matching and a
+  duplicate-install build failure proved that copying them was wrong. The paths
+  remain accounted in `proprietary-files.txt`, are explicitly overlaid by
+  `aosp-replaced-files.txt`, and are not duplicated into the generated vendor
+  package. `setup-makefiles.py` requests the 38 service/binary/permission modules
+  whose names are unambiguous; their libraries arrive transitively.
+- `tools/elf_closure.py` enforces the transitive runtime dependency graph. The
+  original 90 concrete candidates are classified in [elf-closure.md](elf-closure.md):
+  47 required stock paths, 23 conservatively retained parent dependencies,
+  14 AOSP/ROM-provided paths and six factory/META-only exclusions. Final
+  required and unexplained unresolved counts are zero.
 - The remaining exact-path ELF generator still uses the scoped
   `BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES` compatibility switch.
   Converting retained ELF files to typed prebuilts is future hardening.

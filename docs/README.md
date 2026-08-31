@@ -8,6 +8,7 @@
 - [Init/service map](service-map.md)
 - [Kernel module map](module-map.md)
 - [Proprietary blob map](blob-map.md)
+- [Proprietary ELF dependency closure](elf-closure.md)
 - [Battery and charging](battery-charging.md)
 - [Camera, night vision and ThermoVue](camera-thermal.md)
 - [Main and secondary display](display-secondary.md)

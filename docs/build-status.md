@@ -6,14 +6,20 @@
 - All seven stock EROFS logical partitions extracted successfully.
 - `tools/inventory_device.py` completed VINTF, module, ELF, init, property,
   partition and runtime-snapshot inventories.
-- Candidate generation is deterministic: regenerated output matches
-  `proprietary-files.txt` exactly.
-- Offline proprietary extraction: **1,814/1,814 files**, zero missing, zero
+- Inventory, extraction, generated makefiles and audit output are deterministic;
+  clean repeated runs are byte-identical.
+- Offline proprietary extraction: **1,891/1,891 files**, zero missing, zero
   duplicate entries and no mutable NV/userdata/persist partition payloads.
-- Generated vendor integration: 1,513 exact-path copies, 21 presigned APK
-  imports, 198 explicit AOSP replacements, build-system-assembled VINTF.
-- Device audit: 16 PASS, one explicit warning for ten unique dead stock init
-  executable paths used by factory/alternate-BOM RC files.
+- Generated vendor integration: 1,583 exact-path copies, 21 presigned APK
+  imports, 38 explicitly requested AOSP service/binary/permission modules,
+  205 explicit AOSP replacement paths, and build-system-assembled VINTF.
+- ELF runtime closure: zero unresolved required first-order dependencies, zero
+  unresolved required transitive dependencies, zero unexplained dependencies.
+- Device audit: 21 PASS, zero FAIL, and one explicit warning for ten unique
+  dead stock init executable paths used by factory/alternate-BOM RC files.
+- `m selinux_policy` passes for both products. The recovery monolithic policy is
+  byte-identical to the pre-split baseline (`bcc760fe38c76c1d…`), while the
+  full-ROM policy now contains the common TrustKernel device/storage rules.
 - Full product lunch and strict `m nothing` pass for
   `lineage_gq5012bf1-ap2a-userdebug`.
 - Recovery lunch and `m nothing` pass for `twrp_gq5012bf1-ap2a-eng` with ROM

@@ -1,0 +1,106 @@
+# DT-ELF-001 original candidate ledger -- RESOLVED
+#
+# This file originally held 90 unclassified candidate paths. Every path is now
+# classified below. It is not an extraction input. See docs/elf-closure.md and
+# use tools/elf_closure.py --check for the authoritative current result.
+#
+# Final required first-order unresolved: 0
+# Final required transitive unresolved: 0
+# Final unexplained unresolved: 0
+#
+# Classification totals:
+#   ALTERNATE_BOM_OR_FACTORY_ONLY: 6
+#   AOSP_OR_ROM_PROVIDED: 14
+#   REQUIRED_STOCK_BLOB: 47
+#   UNUSED_PARENT_BLOB: 23
+
+ALTERNATE_BOM_OR_FACTORY_ONLY vendor/lib64/libMcClient.so
+ALTERNATE_BOM_OR_FACTORY_ONLY vendor/lib64/libfft_vendor.so
+ALTERNATE_BOM_OR_FACTORY_ONLY vendor/lib64/libhfmanagerwrapper.so
+ALTERNATE_BOM_OR_FACTORY_ONLY vendor/lib64/libkmsetkey.so
+ALTERNATE_BOM_OR_FACTORY_ONLY vendor/lib64/libminiui.so
+ALTERNATE_BOM_OR_FACTORY_ONLY vendor/lib64/libpixelflinger.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.frameworks.stats-V1-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.biometrics.common.thread.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.biometrics.common.util.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.biometrics.face-V3-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.cas-V1-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.contexthub-V2-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.ir-V1-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.secure_element-V1-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/android.hardware.tetheroffload-V1-ndk.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/libcodec2_hidl@1.0.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/libcodec2_hidl@1.1.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/libcodec2_hidl@1.2.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/libcodec2_hidl_plugin.so
+AOSP_OR_ROM_PROVIDED vendor/lib64/libcodec2_soft_common.so
+REQUIRED_STOCK_BLOB vendor/lib64/libDR.so
+REQUIRED_STOCK_BLOB vendor/lib64/libasn1c_core.so
+REQUIRED_STOCK_BLOB vendor/lib64/libccci_util.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_fsr.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_mtk_c2store.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_mtk_vdec.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_mtk_venc.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_vpp_fa_plugin.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_vpp_mi_plugin.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_vpp_qt_plugin.so
+REQUIRED_STOCK_BLOB vendor/lib64/libcodec2_vpp_rs_plugin.so
+REQUIRED_STOCK_BLOB vendor/lib64/libconnfem.so
+REQUIRED_STOCK_BLOB vendor/lib64/libforkexecwrap.so
+REQUIRED_STOCK_BLOB vendor/lib64/libformatter.so
+REQUIRED_STOCK_BLOB vendor/lib64/libhwm.so
+REQUIRED_STOCK_BLOB vendor/lib64/libicd_decoder.so
+REQUIRED_STOCK_BLOB vendor/lib64/libifcutils_mtk.so
+REQUIRED_STOCK_BLOB vendor/lib64/libisetrusty.so
+REQUIRED_STOCK_BLOB vendor/lib64/libkphhelper.so
+REQUIRED_STOCK_BLOB vendor/lib64/libkphproxy.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmmagent.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmmlpqImpl.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmnl.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmtk_bsg.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmtkcam_hal_aidl_common.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmtkcam_hal_aidl_device.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmtkcam_hal_aidl_provider.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmtkcam_hal_aidl_utils.so
+REQUIRED_STOCK_BLOB vendor/lib64/libmtkgpuserv.so
+REQUIRED_STOCK_BLOB vendor/lib64/libneuralnetworks_sl_driver_mtk_prebuilt.so
+REQUIRED_STOCK_BLOB vendor/lib64/libpl.so
+REQUIRED_STOCK_BLOB vendor/lib64/libstorage_otp.so
+REQUIRED_STOCK_BLOB vendor/lib64/libsysenv.so
+REQUIRED_STOCK_BLOB vendor/lib64/libtranslator_utils.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libDR.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmmagent.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmmlpqImpl.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmnl.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmtkcam_hal_aidl_common.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmtkcam_hal_aidl_device.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmtkcam_hal_aidl_provider.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libmtkcam_hal_aidl_utils.so
+REQUIRED_STOCK_BLOB vendor/lib64/mt6878/libneuralnetworks_sl_driver_mtk_prebuilt.so
+REQUIRED_STOCK_BLOB vendor/lib64/mtk_lbs_service-impl.so
+REQUIRED_STOCK_BLOB vendor/lib64/vendor.yft.hardware.changenode@1.0.so
+REQUIRED_STOCK_BLOB vendor/lib64/vendor.yft.hardware.gesturewake@1.0.so
+REQUIRED_STOCK_BLOB vendor/lib64/vendor.yft.hardware.obtainvendor@1.0.so
+UNUSED_PARENT_BLOB system_ext/lib64/libaed.so
+UNUSED_PARENT_BLOB system_ext/lib64/libcomutils.so
+UNUSED_PARENT_BLOB system_ext/lib64/libem_support_jni.so
+UNUSED_PARENT_BLOB system_ext/lib64/libimsma.so
+UNUSED_PARENT_BLOB system_ext/lib64/libimsma_adapt.so
+UNUSED_PARENT_BLOB system_ext/lib64/libimsma_rtp.so
+UNUSED_PARENT_BLOB system_ext/lib64/libimsma_socketwrapper.so
+UNUSED_PARENT_BLOB system_ext/lib64/libmagt.so
+UNUSED_PARENT_BLOB system_ext/lib64/libmagtsync.so
+UNUSED_PARENT_BLOB system_ext/lib64/libmtk_vt_service.so
+UNUSED_PARENT_BLOB system_ext/lib64/libpcap_bak.so
+UNUSED_PARENT_BLOB system_ext/lib64/libshowlogo.so
+UNUSED_PARENT_BLOB system_ext/lib64/libsignal.so
+UNUSED_PARENT_BLOB system_ext/lib64/libsink.so
+UNUSED_PARENT_BLOB system_ext/lib64/libsource.so
+UNUSED_PARENT_BLOB system_ext/lib64/libsysenv_system.so
+UNUSED_PARENT_BLOB system_ext/lib64/libterservice.so
+UNUSED_PARENT_BLOB system_ext/lib64/libvcodec_cap.so
+UNUSED_PARENT_BLOB system_ext/lib64/libvcodec_capenc.so
+UNUSED_PARENT_BLOB system_ext/lib64/libvt_avsync.so
+UNUSED_PARENT_BLOB system_ext/lib64/vendor.mediatek.framework.mtksf_ext-V4-ndk.so
+UNUSED_PARENT_BLOB system_ext/lib64/vendor.mediatek.hardware.log@1.0.so
+UNUSED_PARENT_BLOB system_ext/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
