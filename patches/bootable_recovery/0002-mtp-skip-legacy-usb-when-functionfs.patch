@@ -1,0 +1,32 @@
+diff --git a/partitionmanager.cpp b/partitionmanager.cpp
+index 18d0e29..fcf94ae 100755
+--- a/partitionmanager.cpp
++++ b/partitionmanager.cpp
+@@ -3111,6 +3111,19 @@ bool TWPartitionManager::Enable_MTP(void) {
+ 		return false;
+ 	}
+ 
++	// On a configfs device the USB gadget is owned by init and composed through
++	// /config/usb_gadget, and MTP runs over FunctionFS. Driving the legacy
++	// android_usb interface here is wrong on such devices: cycling
++	// sys.usb.config through "none" makes init recompose the gadget, which drops
++	// the ADB function and can reset idProduct, leaving a single MTP interface
++	// and no ADB. Skip the legacy sequence entirely when the FunctionFS MTP
++	// endpoint is present, and let init own gadget composition.
++	// Literal rather than including mtp/ffs/MtpDescriptors.h, which would pull
++	// MTP headers into this translation unit for a single constant.
++	bool ffs_mtp = access("/dev/usb-ffs/mtp/ep0", W_OK) == 0;
++	if (ffs_mtp) {
++		LOGINFO("MTP: FunctionFS endpoint present, leaving USB gadget composition to init\n");
++	} else {
+ 	char old_value[PROPERTY_VALUE_MAX];
+ 	property_get("sys.usb.config", old_value, "");
+ 	if (strcmp(old_value, "mtp,adb") != 0) {
+@@ -3125,6 +3138,7 @@ bool TWPartitionManager::Enable_MTP(void) {
+ 		TWFunc::write_to_file("/sys/class/android_usb/android0/idProduct", productstr);
+ 		property_set("sys.usb.config", "mtp,adb");
+ 	}
++	}
+ 	/* To enable MTP debug, use the twrp command line feature:
+ 	 * twrp set tw_mtp_debug 1
+ 	 */

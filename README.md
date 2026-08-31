@@ -19,12 +19,12 @@ This repository contains the device-specific configuration required to build rec
 |---|---|
 | cold-boot decrypt | working — one PIN, no ADB intervention |
 | SELinux | working — Enforcing, no functional `permissive=0` denials |
-| battery | working — real percentage, live updates, correct charging state while plugged |
+| battery | working — real percentage, live updates, correct charging and discharging state |
 | touch | working — confirmed on hardware |
 | display / orientation | working |
 | brightness | node verified (`/sys/class/leds/lcd-backlight/brightness`, 1024 of max 2047); UI slider not exercised |
 | ADB | working — devices, shell, push, pull |
-| MTP | not supported — see limitations |
+| MTP | working — FunctionFS, composed alongside ADB, browsable from a Linux host |
 | ADB sideload | not tested |
 | fastbootd | working — `is-userspace: yes`, `fastboot flash vendor_boot_a` verified |
 | internal storage | working — `/data/media/0` readable and writable after decrypt |
@@ -68,30 +68,93 @@ before                     : "No battery devices found" -> getCapacity() fails -
 after                      : GetBatteryInfo() reports capacity 78 then 79, matching sysfs
 plugged result             : status=Charging, charging=1, capacity tracks sysfs
 UI update result           : value changed 78 -> 79 across the session, not frozen
-unplugged result           : NOT TESTED - charger could not be removed during this session
+unplugged result           : confirmed working by the device owner on hardware. Note that
+                             USB is both charger and ADB transport on this device, so
+                             unplugging necessarily drops ADB and the transition cannot be
+                             captured over adb; it was verified visually in the OrangeFox UI.
 ```
 
 Note that the battery is a dual-cell pack: `voltage_now` reads about 8.37 V and
 `charge_full_design` is 8578000. The `3rd-gauge` node reports the same values in
 millivolts and mAh rather than micro units.
 
+### MTP over FunctionFS
+
+MTP works and is composed alongside ADB. Both interfaces are present at once:
+
+```text
+/config/usb_gadget/g1/configs/b.1/f1 -> ffs.adb
+/config/usb_gadget/g1/configs/b.1/f2 -> ffs.mtp
+host: bNumInterfaces 2, iInterface "ADB Interface" + iInterface "MTP"
+```
+
+No MTP server code was changed. `mtp_MtpServer.cpp` already prefers FunctionFS
+whenever `/dev/usb-ffs/mtp/ep0` is writable and only falls back to the legacy
+`/dev/mtp_usb` node otherwise. The legacy node cannot exist here: the kernel has
+no MTP gadget function, `mtp.gs0` cannot be instantiated and `/proc/devices`
+lists no MTP entry. So the work is gadget composition plus one recovery patch.
+
+Sequencing is the whole problem. A FunctionFS function cannot be bound to the
+UDC until its descriptors are written, and that only happens once the server
+opens `ep0`. Binding earlier makes the UDC write fail and takes USB down
+completely, ADB included. The bring-up is therefore split in two:
+
+1. `gq5012bf1-mtp-setup.sh` at `on boot` creates the `ffs.mtp` function and
+   mounts FunctionFS at `/dev/usb-ffs/mtp`. It does not touch the UDC.
+2. `gq5012bf1-mtp-bind.sh`, triggered by `sys.usb.ffs.mtp.ready=1` which
+   `MtpDescriptors.cpp` sets after writing descriptors, unbinds the UDC, links
+   `ffs.mtp` next to `ffs.adb`, restores the identifiers and rebinds.
+
+`patches/bootable_recovery/0002-mtp-skip-legacy-usb-when-functionfs.patch` makes
+`Enable_MTP()` skip its legacy `android_usb` sequence when the FunctionFS
+endpoint exists, leaving gadget composition to init.
+
+#### Why the obvious approach fails
+
+Build33 instead pre-set `sys.usb.config=mtp,adb` so that `Enable_MTP()` would
+skip the legacy block on its own. Something outside recovery acts on
+`sys.usb.config` and recomposed the gadget as MTP-only, dropping `ffs.adb` and
+resetting the product id. The host enumerated:
+
+```text
+idProduct 0x0000, bNumInterfaces 1, bInterfaceClass 6 Imaging, iInterface MTP
+```
+
+MTP worked, but ADB was gone. `sys.usb.config` must not be written on this
+device. The same active USB manager also reverts `idProduct`: writing `0x4ee2`
+succeeds and reads back correctly immediately after rebinding, then returns to
+`0xd001` on its own.
+
+#### Host-side note
+
+A Linux host runs both an ADB server and a desktop MTP client, and both claim
+the USB device, so `mtp-detect` and `gio` report
+`libusb_claim_interface() reports device is busy`. Browsing from the desktop
+file manager works while ADB stays connected. `libmtp` also misidentifies
+`18d1:d001` as a Meizu Pro 5, which is cosmetic.
+
+### Build system note: .work must not be scanned by soong
+
+Device inventory tooling clones `erofs-utils` into `device/ulefone/gq5012bf1/.work/`.
+That path is in `.gitignore`, but soong does not read `.gitignore` and scans every
+directory for `Android.bp`, so the build fails with:
+
+```text
+error: external/erofs-utils/Android.bp:34:1: module "external_erofs-utils_license" already defined
+```
+
+`.work/.find-ignore` marks the subtree as pruned. `finder.go` treats `.out-dir`
+and `.find-ignore` as prune markers. Keep that file in place, and recreate it if
+the inventory tooling ever removes it.
+
 ### Known limitations
 
-- **MTP is not supported.** `TW_EXCLUDE_MTP := true` is deliberate.
-  `TWPartitionManager::Enable_MTP()` unconditionally sets `sys.usb.config` to
-  `none`, writes the legacy `/sys/class/android_usb/android0/idVendor` and
-  `idProduct` nodes, then sets `mtp,adb`. This device composes USB through
-  configfs, and `/config/usb_gadget/g1/functions` contains only `ffs.adb` and
-  `ffs.fastboot`. There is no kernel MTP gadget function: `mtp.gs0` cannot be
-  instantiated, and `/proc/devices` has no MTP entry, so the `/dev/mtp_usb`
-  control node that `mtp_MtpServer.cpp` opens does not exist. An `ffs.mtp`
-  function *can* be created, so a FunctionFS port is theoretically possible, but
-  it requires gadget composition work plus init handling. Enabling MTP as-is
-  tears down the ADB gadget, which is how the original bring-up regression was
-  found. ADB push/pull covers file transfer in the meantime.
-- **Charging-state transition is unverified.** Correct `Charging` state was
-  observed while plugged, but the charger was never removed, so the transition to
-  `Discharging` has not been proven on hardware.
+- **MTP requires the host to not fight over the device.** On a Linux host both
+  the ADB server and the desktop MTP client (KDE `kiod6`, or `gvfsd-mtp`) hold
+  the USB device. `mtp-detect` and `gio` therefore report
+  `libusb_claim_interface() reports device is busy`. This is host-side
+  contention, not a device fault: browsing from the desktop file manager works
+  while ADB stays connected.
 - **`odm` has no logical partition.** `/dev/block/mapper` exposes `odm_dlkm_a/b`
   but no `odm_a`, so an `odm` mount attempt fails by design, not by fault.
 - Two harmless enforcing denials remain, both directory reads of `rootfs` by

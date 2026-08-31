@@ -1,5 +1,6 @@
 import /init.recovery.project.rc
 import /init.recovery.gq5012bf1.security.rc
+import /init.recovery.gq5012bf1.usb.rc
 
 on init
     setprop sys.usb.configfs 1

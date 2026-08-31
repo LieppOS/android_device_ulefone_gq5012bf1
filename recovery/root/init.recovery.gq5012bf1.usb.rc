@@ -1,0 +1,40 @@
+# MTP over FunctionFS for GQ5012BF1.
+#
+# This device composes USB through configfs and has no kernel MTP gadget
+# function, so the legacy /dev/mtp_usb path TWRP falls back to cannot work
+# here. TWRP's MTP server already prefers FunctionFS when /dev/usb-ffs/mtp/ep0
+# is writable, so MTP is enabled by providing that transport rather than by
+# changing recovery code.
+#
+# Sequencing matters. A FunctionFS function cannot be bound to the UDC until
+# its descriptors have been written, and that only happens once the MTP server
+# opens ep0. Binding early makes the UDC write fail and takes USB down
+# completely, including ADB. So the work is split in two:
+#
+#   stage 1  create ffs.mtp and mount FunctionFS   (before the server starts)
+#   stage 2  link ffs.mtp into the gadget and rebind the UDC
+#            (after sys.usb.ffs.mtp.ready=1, set by MtpDescriptors.cpp)
+
+service gq5012bf1-mtp-setup /system/bin/sh /system/bin/gq5012bf1-mtp-setup.sh
+    class core
+    user root
+    group root
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+service gq5012bf1-mtp-bind /system/bin/sh /system/bin/gq5012bf1-mtp-bind.sh
+    class core
+    user root
+    group root
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+on boot
+    start gq5012bf1-mtp-setup
+
+# MtpDescriptors.cpp sets this once the descriptors are on ep0, which is the
+# only point at which the gadget can safely take the function.
+on property:sys.usb.ffs.mtp.ready=1
+    start gq5012bf1-mtp-bind

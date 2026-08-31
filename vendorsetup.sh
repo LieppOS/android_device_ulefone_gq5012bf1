@@ -53,8 +53,18 @@ _gq_apply_patch() {
     return 1
 }
 
+# Device inventory tooling clones erofs-utils into .work/ inside the device
+# tree. That path is gitignored, but soong does not read .gitignore and scans
+# every directory for Android.bp, so the build dies with
+#   error: external/erofs-utils/Android.bp: module ... already defined
+# finder.go treats .out-dir and .find-ignore as prune markers, so drop one in.
+if [ -d "$(dirname "${BASH_SOURCE[0]:-$0}")/.work" ]; then
+    touch "$(dirname "${BASH_SOURCE[0]:-$0}")/.work/.find-ignore" 2>/dev/null
+fi
+
 if [ -n "$ANDROID_BUILD_TOP" ]; then
     _gq_apply_patch "$ANDROID_BUILD_TOP/system/sepolicy" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/system_sepolicy/0001-recovery-read-vold-metadata-key.patch" "recovery metadata SELinux patch" || return 1
     _gq_apply_patch "$ANDROID_BUILD_TOP/bootable/recovery" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/bootable_recovery/0001-twrp-ramdisk-require-vendor-property-contexts.patch" "recovery property-context dependency patch" || return 1
+    _gq_apply_patch "$ANDROID_BUILD_TOP/bootable/recovery" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/bootable_recovery/0002-mtp-skip-legacy-usb-when-functionfs.patch" "MTP FunctionFS USB patch" || return 1
     unset -f _gq_apply_patch
 fi

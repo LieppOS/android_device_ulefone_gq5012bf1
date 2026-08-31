@@ -212,9 +212,21 @@ TW_EXCLUDE_DEFAULT_USB_INIT := true
 # Host timing matches this path: 18d1:d001 appears, then a permanent disconnect
 # ~3s later as the OrangeFox UI finishes starting. Build 14 tests this hypothesis.
 #
-# Disable MTP for bring-up. Revisit only after ADB is stable; if MTP is wanted
-# later it needs the configfs/ffs path, not the legacy one.
-TW_EXCLUDE_MTP := true
+# MTP is enabled over FunctionFS, which is the configfs path this device needs.
+# The legacy route in the comment above genuinely does not work here: the kernel
+# has no MTP gadget function, mtp.gs0 cannot be instantiated, /proc/devices has
+# no MTP entry, and so /dev/mtp_usb never exists.
+#
+# No recovery code change is required. mtp_MtpServer.cpp already prefers
+# FunctionFS whenever /dev/usb-ffs/mtp/ep0 is writable and only falls back to
+# the legacy node otherwise, so the port is purely gadget composition, done by
+# init.recovery.gq5012bf1.usb.rc plus gq5012bf1-mtp-setup.sh and
+# gq5012bf1-mtp-bind.sh.
+#
+# Enable_MTP()'s legacy android_usb sequence is skipped by pre-setting
+# sys.usb.config to mtp,adb, which is the condition it checks before running it.
+# That is what keeps the ADB gadget from being torn down.
+TW_MTP_DEVICE := /dev/usb-ffs/mtp/ep0
 
 TW_INCLUDE_FASTBOOTD := true
 TW_INCLUDE_REPACKTOOLS := true
