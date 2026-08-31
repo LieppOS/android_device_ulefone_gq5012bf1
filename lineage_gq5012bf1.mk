@@ -5,23 +5,19 @@
 
 DEVICE_PATH := device/ulefone/gq5012bf1
 
+# Inherit from the standard phone product definitions. Most specific first.
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
-$(call inherit-product, $(DEVICE_PATH)/device.mk)
-$(call inherit-product-if-exists, vendor/ulefone/gq5012bf1/gq5012bf1-vendor.mk)
 
-# Prefer the native LieppOS product base, with a Lineage-compatible fallback.
+# Inherit the device integration.
+$(call inherit-product, $(DEVICE_PATH)/device.mk)
+
+# Inherit the ROM phone configuration. The fallback keeps this device tree
+# usable in both LieppOS and LineageOS source checkouts; the current recovery
+# checkout intentionally contains neither complete ROM vendor tree.
 ifneq ($(wildcard vendor/lieppos/config/common_full_phone.mk),)
 $(call inherit-product, vendor/lieppos/config/common_full_phone.mk)
 else ifneq ($(wildcard vendor/lineage/config/common_full_phone.mk),)
 $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
-endif
-
-PRODUCT_ENFORCE_VINTF_MANIFEST := true
-# Stock launched on Android 15 (API 35). Keep recovery-source parsing possible
-# on the current Android 14 tree, while setting the real launch level on every
-# supported Android 15+ LieppOS branch.
-ifneq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
-PRODUCT_SHIPPING_API_LEVEL := 35
 endif
 
 PRODUCT_NAME := lineage_gq5012bf1
