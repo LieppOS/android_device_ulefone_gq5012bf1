@@ -10,4 +10,10 @@ type tkcore_data_file, file_type, data_file_type, mlstrustedobject;
 type tkcore_protect_data_file, file_type, data_file_type;
 type tkcore_log_file, file_type, data_file_type;
 
+# Stock vendor labels of the two teed --prot mount roots. Without these types
+# the recovery policy resolves the on-disk contexts to "unlabeled" and teed
+# cannot even traverse into its own persistent stores.
+type persist_data_file, file_type, data_file_type;
+type protect_f_data_file, file_type, data_file_type;
+
 type proc_tkcore, fs_type, proc_type;

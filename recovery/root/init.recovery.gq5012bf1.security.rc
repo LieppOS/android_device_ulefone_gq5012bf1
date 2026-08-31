@@ -36,6 +36,14 @@ service vendor.gatekeeper /vendor/bin/hw/android.hardware.gatekeeper-service.tru
     group system
     disabled
 
+service gq5012bf1-tee-storage /system/bin/sh /system/bin/gq5012bf1-tee-storage.sh
+    class core
+    user root
+    group root
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
 service gq5012bf1-keystore2 /system/bin/keystore2 /tmp/misc/keystore
     class early_hal
     user root
@@ -44,16 +52,14 @@ service gq5012bf1-keystore2 /system/bin/keystore2 /tmp/misc/keystore
     seclabel u:r:keystore:s0
     disabled
 
-# ISOLATION BUILD - discriminating test, not a candidate fix.
+# Stock two-stage TrustKernel handshake.
 #
-# No TrustKernel service starts automatically. teed, Gatekeeper, KeyMint and
-# Keystore2 are driven manually over ADB exactly once, from a truly clean cold
-# boot, after recovery has mounted metadata-encrypted /data. This separates:
-#   H1 - TEE secure storage (/data/vendor/t6/fs) unavailable because we declare
-#        vendor.trustkernel.fs.state=ready before /data exists, and
-#   H2 - KeyMint latching ro.build.version.release once per TA lifetime.
-# See CLAUDE_FBE_REPORT.md. The previous Gatekeeper-14/KeyMint-16 split is
-# removed here: the Gatekeeper HAL binary reads no build property at all.
+# Stage 1 (gq5012bf1-security-prep) mounts the active system/vendor, installs
+# the VINTF and identity inputs, and announces fs.state=prepare.
+# Stage 2 (gq5012bf1-tee-storage) waits for OrangeFox to mount the
+# metadata-encrypted /data, creates the teed datapath there, and only then
+# announces fs.state=ready. teed must not start before that: tee_userinit runs
+# once per secure-world lifetime and cannot be redone by restarting the HALs.
 on boot
     stop keystore2
     stop vendor.boot-default
@@ -62,11 +68,39 @@ on boot
     # IBootControl at the splash logo (commit 078db47).
     start vendor.boot-default
 
-# Prepare the Keystore2 temp DB directory only. This starts no service, so it
-# does not contaminate the test, and keeps the already-proven DB labelling out
-# of the manual sequence.
+# teed starts here, mirroring stock's "on post-fs / start teed". It must NOT
+# wait for /data: recovery gets the metadata key from KeyMint, KeyMint needs
+# teed, and /data cannot be mounted until that key is retrieved. Gating teed
+# on /data therefore deadlocks recovery at the splash.
+on property:vendor.trustkernel.fs.state=prepare
+    start teed
+    start gq5012bf1-tee-storage
+
+# KeyMint starts as soon as teed is up. Recovery needs it to retrieve the
+# metadata key, and it must not be gated behind anything that depends on /data.
+on property:vendor.trustkernel.ready=true
+    start vendor.keymint-3-0-trustkernel
+
+# Gatekeeper deliberately starts LATE, separately from KeyMint, once
+# gq5012bf1-tee-storage announces fs.state=ready.
+#
+# Verified on hardware: this ordering is what makes user-0 FBE decryption
+# succeed under enforcing SELinux. Starting Gatekeeper together with KeyMint
+# (Build25/Build26 behaviour) reproduces the Keystore2 failure
+# "No suitable auth token found" / KEY_USER_NOT_AUTHENTICATED.
+#
+# In recovery /data cannot be mounted until Gatekeeper and Keystore2 exist, so
+# gq5012bf1-tee-storage always reaches its timeout and fail-opens here. The
+# resulting delay before Gatekeeper opens its trusted-application session is
+# load-bearing and must not be tuned away without re-testing decryption.
 on property:vendor.trustkernel.fs.state=ready
     mkdir /tmp/misc 0755 root root
     mkdir /tmp/misc/keystore 0755 root root
     restorecon_recursive /tmp/misc/keystore
     restorecon /system/bin/keystore2
+    start vendor.keymint-3-0-trustkernel
+    start vendor.gatekeeper
+
+on property:init.svc.vendor.gatekeeper=running
+    exec u:r:recovery:s0 root root -- /system/bin/sleep 1
+    start gq5012bf1-keystore2

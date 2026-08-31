@@ -2,6 +2,8 @@
 /data/vendor/t6(/.*)?                     u:object_r:tkcore_data_file:s0
 /data/vendor/t6/app(/.*)?                 u:object_r:tkcore_spta_file:s0
 /data/vendor/t6/tkcore\.log               u:object_r:tkcore_log_file:s0
+/mnt/vendor/persist                       u:object_r:persist_data_file:s0
+/mnt/vendor/protect_f                     u:object_r:protect_f_data_file:s0
 /mnt/vendor/persist/t6(/.*)?              u:object_r:tkcore_protect_data_file:s0
 /mnt/vendor/persist/keybox(/.*)?          u:object_r:tkcore_protect_data_file:s0
 /mnt/vendor/protect_f/tee(/.*)?           u:object_r:tkcore_protect_data_file:s0

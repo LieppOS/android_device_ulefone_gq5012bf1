@@ -2124,4 +2124,76 @@ The recovery `gq5012bf1-security-setup.sh` skips `prepare` and sets `vendor.trus
 
 This also explains why a late manual sequence succeeded while a cold boot with the same Linux service order failed. The late attempt ran after `/data` was mounted, so `/data/vendor/t6/fs` was genuine secure storage, whereas a cold boot brings the entire TrustKernel stack up before `/data` exists. The observed `userinit already done` confirms trusted-application initialization is once per secure-world lifetime and is not repeated by restarting the Linux HALs.
 
+### Build28 verified enforcing FBE decryption
+
+Build28 achieves the target result. A cold boot into OrangeFox with SELinux enforcing, followed by entering the correct PIN once, decrypts the Android 16 user-0 data with no manual ADB intervention.
+
+Verified on hardware:
+
+```text
+I:Successfully decrypted metadata encrypted data partition
+using secdis to decrypt spblob
+GateKeeper status ok
+spblob v2 / v3
+Data successfully decrypted
+
+twrp.user.0.decrypt=1
+getenforce -> Enforcing
+/data/system_ce/0 -> accounts_ce.db, activity_snapshots, appsearch, appwidget
+/data/data       -> android, android.ext.services, android.ext.shared
+```
+
+No enforcing AVC denials remain for `tee`, `hal_keymint_default`, `hal_gatekeeper_default`, `keystore` or `recovery`.
+
+### Build28 TrustKernel secure-storage link permission
+
+The decisive missing permission was a single access vector. TrustKernel commits a persistent object by hard-linking its staged block file, which produced this enforcing denial immediately before every failed unwrap:
+
+```text
+avc: denied { link } for name="block0.1" dev="sdc17"
+  scontext=u:r:tee:s0 tcontext=u:object_r:tkcore_protect_data_file:s0
+  tclass=file permissive=0
+```
+
+In this AOSP version `create_file_perms` expands to `{ create rename setattr unlink rw_file_perms }` and does not include `link`, so the existing `create_file_perms` grant was insufficient. The policy now adds `allow tee tkcore_protect_data_file:file link` explicitly.
+
+### Build28 teed mount-root traversal
+
+The recovery policy did not define the stock vendor types of the two `teed --prot` mount roots, so `/mnt/vendor/persist` and `/mnt/vendor/protect_f` resolved to `unlabeled` and `teed` could not traverse into its own persistent stores:
+
+```text
+avc: denied { search } for dev="sdc17" tcontext=u:object_r:unlabeled:s0
+  trawcon="u:object_r:protect_f_data_file:s0"
+avc: denied { search } for dev="sdc9"  tcontext=u:object_r:unlabeled:s0
+  trawcon="u:object_r:persist_data_file:s0"
+```
+
+The device vendor policy now declares `persist_data_file` and `protect_f_data_file`, labels both mount roots, and grants `tee` only `dir search`. The payload directories keep their own `tkcore_protect_data_file` label.
+
+### Build28 Gatekeeper must start after KeyMint, not with it
+
+Recovery cannot mount `/data` until Gatekeeper and Keystore2 exist, because the OrangeFox FBE path blocks in `futex_wait_queue` at the splash until they are available. A build that started only `teed` and KeyMint was proven to hang at the logo with `/data` never mounted. TrustKernel secure file storage on `/data/vendor/t6/fs` therefore cannot exist before the trusted applications start, and the stock `prepare`/`ready` handshake cannot be reproduced literally in recovery.
+
+The working arrangement starts `teed` and KeyMint immediately, and starts Gatekeeper separately and later, when `gq5012bf1-tee-storage` announces `vendor.trustkernel.fs.state=ready`. Because `/data` is not yet mounted at that point, that service always reaches its timeout and fail-opens, which produces the delay before Gatekeeper opens its trusted-application session.
+
+Starting Gatekeeper together with KeyMint, as Build25 and Build26 did, reproduces `No suitable auth token found` and `Error::Km(KEY_USER_NOT_AUTHENTICATED)` from Keystore2. The separation is therefore load-bearing and must not be tuned away without re-testing decryption.
+
+Any service that recovery depends on must never be gated behind a property that only becomes true after `/data` is mounted. Doing so deadlocks recovery at the splash. `gq5012bf1-tee-storage` is deliberately fail-open for this reason.
+
+### Build28 KeyMint TrustKernel command identifiers
+
+Live `KeyMintHAL` logging resolves the previously unknown command identifiers against `TrustKernelKeyMintImplementation.cpp`:
+
+```text
+Invoke cmdId 16 at ...TrustKernelKeyMintImplementation.cpp:1774   begin
+Invoke cmdId 17 at ...TrustKernelKeyMintImplementation.cpp:1880   update
+Invoke cmdId 18 at ...TrustKernelKeyMintImplementation.cpp:1986   finish
+```
+
+### Build28 release identity is not the decisive input
+
+The successful Build28 decryption occurred with `ro.build.version.release` reading `14`, while `ro.build.version.security_patch` was `2026-06-01`, `ro.vendor.build.security_patch` was `2025-09-05` and `ro.product.model` was `Armor 29 Pro`.
+
+The earlier conclusion that the Android 16 release value must be installed before KeyMint starts is therefore not supported as a requirement for decryption. Combined with the finding that the Gatekeeper HAL reads no build property at all, the Build25 split-identity model is withdrawn. The decisive inputs are the TrustKernel secure-storage access described above and the Gatekeeper start ordering, not the release string.
+
 <!-- DT-SECURITY-STACK-END -->

@@ -23,6 +23,15 @@ allow tee tkcore_data_file:file map;
 allow tee tkcore_protect_data_file:dir create_dir_perms;
 allow tee tkcore_protect_data_file:file create_file_perms;
 allow tee tkcore_protect_data_file:file map;
+# TrustKernel commits persistent objects by hard-linking the staged block file
+# (observed: denied { link } on "block0.1"). create_file_perms in this AOSP
+# version is { create rename setattr unlink rw_file_perms } and excludes link.
+allow tee tkcore_protect_data_file:file link;
+
+# teed must traverse the two --prot mount roots to reach its stores. Search
+# only; the payload directories keep their own tkcore_protect_data_file label.
+allow tee persist_data_file:dir search;
+allow tee protect_f_data_file:dir search;
 allow tee tkcore_systa_file:dir r_dir_perms;
 allow tee tkcore_systa_file:file r_file_perms;
 allow tee tkcore_systa_file:file map;

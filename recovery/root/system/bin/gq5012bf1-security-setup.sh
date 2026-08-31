@@ -49,7 +49,12 @@ read_prop() {
     grep -m 1 "^${1}=" "$2" | cut -d= -f2-
 }
 
-RELEASE="14"
+# KeyMint binds key blobs to the OS version and rejects them with
+# ErrorCode::INVALID_KEY_BLOB (TEE return -33) when it does not match. The
+# active synthetic-password blobs were created by the installed system, so the
+# release must come from that system, not from the Android 14 recovery.
+# Gatekeeper reads no build property at all, so there is no split identity.
+RELEASE="$(read_prop ro.build.version.release "$SYSTEM_PROP")"
 PLATFORM_SPL="$(read_prop ro.build.version.security_patch "$SYSTEM_PROP")"
 VENDOR_SPL="$(read_prop ro.vendor.build.security_patch "$VENDOR_PROP")"
 
@@ -98,12 +103,14 @@ mkdir -p /mnt/vendor/protect_f/tee
 chown system:system /mnt/vendor/protect_f/tee
 restorecon /mnt/vendor/protect_f/tee 2>/dev/null
 
-mkdir -p /data/vendor/t6/fs /data/vendor/t6/app
-chown system:system /data/vendor/t6 /data/vendor/t6/fs /data/vendor/t6/app
-restorecon /data/vendor/t6 /data/vendor/t6/fs /data/vendor/t6/app 2>/dev/null
-
+# Stage 1 ends here. TrustKernel secure file storage lives on /data
+# (teed --datapath /data/vendor/t6/fs), which is still encrypted at this
+# point, so we must not claim it is ready yet. Stock trustkernel.rc uses the
+# same two-stage handshake: announce "prepare", create the storage once /data
+# exists, and only then announce "ready". Declaring "ready" early is what
+# produced CreatePersistentObject 0xf0100003 (TEE_ERROR_STORAGE_NOT_AVAILABLE).
 setprop vendor.trustkernel.fs.mode 3
-setprop vendor.trustkernel.fs.state ready
+setprop vendor.trustkernel.fs.state prepare
 
-echo "security setup complete"
+echo "security setup complete (stage 1, awaiting /data)"
 exit 0
