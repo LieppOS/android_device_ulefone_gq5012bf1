@@ -34,3 +34,14 @@ genfscon sysfs /devices/virtual/power_supply u:object_r:sysfs_batteryinfo:s0
 # sc-cp master/slave charge pumps (type=Mains)
 genfscon sysfs /devices/platform/soc/11d71000.i2c/i2c-11/11-0066/power_supply u:object_r:sysfs_batteryinfo:s0
 genfscon sysfs /devices/platform/soc/11e01000.i2c/i2c-6/6-0067/power_supply u:object_r:sysfs_batteryinfo:s0
+
+# MediaTek charger-type node, polled continuously by the health HAL. It sits
+# directly under the charger platform device rather than under a power_supply
+# subdirectory, so the entries above do not cover it:
+#
+#   avc: denied { read } for name="gftk_charger_type" dev="sysfs"
+#     scontext=u:r:hal_health_default:s0 tcontext=u:object_r:sysfs:s0
+#     tclass=file permissive=0
+#
+# Labelled as a single exact file rather than widening the charger directory.
+genfscon sysfs /devices/platform/charger/gftk_charger_type u:object_r:sysfs_batteryinfo:s0
