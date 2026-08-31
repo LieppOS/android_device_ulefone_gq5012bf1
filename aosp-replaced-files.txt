@@ -1,6 +1,5 @@
 # Stock paths intentionally provided by AOSP build modules
 # Generated from strict duplicate-output analysis; see docs/blob-map.md.
-
 vendor/bin/boringssl_self_test64
 vendor/bin/hw/android.hardware.biometrics.face-service.example
 vendor/bin/hw/android.hardware.contexthub-service.tinysys
@@ -70,6 +69,8 @@ vendor/lib64/android.hardware.audio@7.0.so
 vendor/lib64/android.hardware.audio@7.1-util.so
 vendor/lib64/android.hardware.audio@7.1.so
 vendor/lib64/android.hardware.biometrics.common-V3-ndk.so
+vendor/lib64/android.hardware.biometrics.common.thread.so
+vendor/lib64/android.hardware.biometrics.common.util.so
 vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so
 vendor/lib64/android.hardware.bluetooth-V1-ndk.so
 vendor/lib64/android.hardware.bluetooth.audio-V3-ndk.so
@@ -172,6 +173,11 @@ vendor/lib64/libaudiofoundation.so
 vendor/lib64/libbluetooth_audio_session.so
 vendor/lib64/libbluetooth_audio_session_aidl.so
 vendor/lib64/libcamera2ndk_vendor.so
+vendor/lib64/libcodec2_hidl@1.0.so
+vendor/lib64/libcodec2_hidl@1.1.so
+vendor/lib64/libcodec2_hidl@1.2.so
+vendor/lib64/libcodec2_hidl_plugin.so
+vendor/lib64/libcodec2_soft_common.so
 vendor/lib64/libcppbor_external.so
 vendor/lib64/libcppcose_rkp.so
 vendor/lib64/libdrm.so

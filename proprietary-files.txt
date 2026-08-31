@@ -93,6 +93,29 @@ system_ext/bin/usp_service # stock init service usp_service
 system_ext/bin/vtservice # stock init service vtservice
 system_ext/etc/build.prop # partition properties
 system_ext/etc/mtklog-config.prop # partition properties
+system_ext/lib64/libaed.so # DT_NEEDED by system_ext/bin/aee_aed64
+system_ext/lib64/libcomutils.so # DT_NEEDED by system_ext/lib64/libimsma.so
+system_ext/lib64/libem_support_jni.so # DT_NEEDED by system_ext/bin/em_svr
+system_ext/lib64/libimsma.so # DT_NEEDED by system_ext/lib64/libmtk_vt_service.so
+system_ext/lib64/libimsma_adapt.so # DT_NEEDED by system_ext/lib64/libimsma_rtp.so
+system_ext/lib64/libimsma_rtp.so # DT_NEEDED by system_ext/lib64/libimsma.so
+system_ext/lib64/libimsma_socketwrapper.so # DT_NEEDED by system_ext/lib64/libimsma_rtp.so
+system_ext/lib64/libmagt.so # DT_NEEDED by system_ext/bin/magt
+system_ext/lib64/libmagtsync.so # DT_NEEDED by system_ext/lib64/libmagt.so
+system_ext/lib64/libmtk_vt_service.so # DT_NEEDED by system_ext/bin/vtservice
+system_ext/lib64/libpcap_bak.so # DT_NEEDED by system_ext/bin/netdiag
+system_ext/lib64/libshowlogo.so # DT_NEEDED by system_ext/bin/kpoc_charger
+system_ext/lib64/libsignal.so # DT_NEEDED by system_ext/lib64/libimsma.so
+system_ext/lib64/libsink.so # DT_NEEDED by system_ext/lib64/libimsma.so
+system_ext/lib64/libsource.so # DT_NEEDED by system_ext/lib64/libimsma.so
+system_ext/lib64/libsysenv_system.so # DT_NEEDED by system_ext/bin/em_svr
+system_ext/lib64/libterservice.so # DT_NEEDED by system_ext/bin/terservice
+system_ext/lib64/libvcodec_cap.so # DT_NEEDED by system_ext/lib64/libimsma.so
+system_ext/lib64/libvcodec_capenc.so # DT_NEEDED by system_ext/lib64/libvcodec_cap.so
+system_ext/lib64/libvt_avsync.so # DT_NEEDED by system_ext/lib64/libmtk_vt_service.so
+system_ext/lib64/vendor.mediatek.framework.mtksf_ext-V4-ndk.so # DT_NEEDED by system_ext/lib64/libmagt.so
+system_ext/lib64/vendor.mediatek.hardware.log@1.0.so # DT_NEEDED by system_ext/bin/loghidlsysservice
+system_ext/lib64/vendor.mediatek.hardware.videotelephony@1.0.so # DT_NEEDED by system_ext/lib64/libmtk_vt_service.so
 system_ext/priv-app/ImsService/ImsService.apk # device application
 system_ext/priv-app/ImsService/oat/arm64/ImsService.odex # device application
 system_ext/priv-app/ImsService/oat/arm64/ImsService.vdex # device application
@@ -728,6 +751,7 @@ vendor/lib64/lib3a.sensors.flicker.so # hardware-facing ELF
 vendor/lib64/lib3a.stat.so # DT_NEEDED by vendor/lib64/libcam.halsensor.so
 vendor/lib64/libBasicModule.so # DT_NEEDED by vendor/lib64/libcam.halisp.TuningDataProvider.so
 vendor/lib64/libDBAccessor_ISP.so # DT_NEEDED by vendor/lib64/libcameracustom.camera.isp.so
+vendor/lib64/libDR.so # DT_NEEDED by vendor/bin/mnld
 vendor/lib64/libGsFace_ca.so # DT_NEEDED by vendor/lib64/hw/face.default.so
 vendor/lib64/libJpgEncPipe.so # DT_NEEDED by vendor/lib64/libmtkcam_simager.so
 vendor/lib64/libMtkMediaController.so # hardware-facing ELF
@@ -766,6 +790,7 @@ vendor/lib64/libapiwrapper.so # DT_NEEDED by vendor/lib64/lib3a.af.assist.so
 vendor/lib64/libapu_mdw.so # DT_NEEDED by vendor/lib64/libneuron_wrapper.so
 vendor/lib64/libapudcutils.so # DT_NEEDED by vendor/lib64/libmtkcam_pipemgr.so
 vendor/lib64/libarm_gralloc_properties_sysprop.so # hardware-facing ELF
+vendor/lib64/libasn1c_core.so # DT_NEEDED by vendor/lib64/libtranslator_utils.so
 vendor/lib64/libaudio_aidl_conversion_common_ndk.so # hardware-facing ELF
 vendor/lib64/libaudio_param_parser-vnd.so # hardware-facing ELF
 vendor/lib64/libaudioclient_aidl_conversion.so # hardware-facing ELF
@@ -898,7 +923,17 @@ vendor/lib64/libcameracustom.lens.so # hardware-facing ELF
 vendor/lib64/libcameracustom.plugin.so # hardware-facing ELF
 vendor/lib64/libcameracustom.so # hardware-facing ELF
 vendor/lib64/libcameracustom_camera_db_ext.so # hardware-facing ELF
+vendor/lib64/libccci_util.so # DT_NEEDED by vendor/bin/ccci_mdinit
+vendor/lib64/libcodec2_fsr.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
+vendor/lib64/libcodec2_mtk_c2store.so # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
+vendor/lib64/libcodec2_mtk_vdec.so # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
+vendor/lib64/libcodec2_mtk_venc.so # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
+vendor/lib64/libcodec2_vpp_fa_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_venc.so
+vendor/lib64/libcodec2_vpp_mi_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
+vendor/lib64/libcodec2_vpp_qt_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
+vendor/lib64/libcodec2_vpp_rs_plugin.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
 vendor/lib64/libcomposer_ext.so # hardware-facing ELF
+vendor/lib64/libconnfem.so # DT_NEEDED by vendor/bin/nvram_daemon
 vendor/lib64/libcppbor_external.so # DT_NEEDED by vendor/lib64/libkeymint.so
 vendor/lib64/libcppcose_rkp.so # DT_NEEDED by vendor/lib64/libkeymaster_portable.so
 vendor/lib64/libcv_faceid.so # DT_NEEDED by vendor/lib64/hw/face.default.so
@@ -927,6 +962,8 @@ vendor/lib64/libfeatureiodrv_mem.so # DT_NEEDED by vendor/lib64/libcam.hal3a.v3.
 vendor/lib64/libfeaturepolicy.so # DT_NEEDED by vendor/lib64/libfeaturepolicy_dbhandler.so
 vendor/lib64/libfeaturepolicy_dbhandler.so # DT_NEEDED by vendor/lib64/libcam.utils.sensorprovider.so
 vendor/lib64/libfile_op.so # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.nvram-impl.so
+vendor/lib64/libforkexecwrap.so # DT_NEEDED by vendor/bin/ipsec_mon
+vendor/lib64/libformatter.so # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
 vendor/lib64/libfprint-x64.so # DT_NEEDED by vendor/lib64/hw/microarray.fingerprint.default.so
 vendor/lib64/libged.so # DT_NEEDED by vendor/lib64/libgralloc_extra.so
 vendor/lib64/libgpud.so # DT_NEEDED by vendor/lib64/hw/android.hardware.graphics.allocator-V2-mediatek.so
@@ -940,6 +977,9 @@ vendor/lib64/libhfmanager.so # DT_NEEDED by vendor/lib64/libcam.utils.sensorprov
 vendor/lib64/libhidltransport.so # DT_NEEDED by vendor/lib64/libcam.utils.sensorprovider.so
 vendor/lib64/libhidparser.so # DT_NEEDED by vendor/lib64/hw/sensors.dynamic_sensor_hal.so
 vendor/lib64/libhwbinder.so # DT_NEEDED by vendor/lib64/libaudioprimarydevicehalifclient.so
+vendor/lib64/libhwm.so # DT_NEEDED by vendor/bin/hw/vendor.yft.hardware.sensorcali@2.0-service-lazy
+vendor/lib64/libicd_decoder.so # DT_NEEDED by vendor/bin/dmc_core
+vendor/lib64/libifcutils_mtk.so # DT_NEEDED by vendor/bin/frs
 vendor/lib64/libimage_io.so # DT_NEEDED by vendor/lib64/libultrahdr_mtk.so
 vendor/lib64/libimagebuffer_wrapper.so # DT_NEEDED by vendor/lib64/libaiseg_sun.so
 vendor/lib64/libimgstream-custom.so # DT_NEEDED by vendor/lib64/libimgsys_cmt.so
@@ -952,6 +992,7 @@ vendor/lib64/libimgsys_v4l2.so # DT_NEEDED by vendor/lib64/libimgsys_main.so
 vendor/lib64/libion_mtk.so # DT_NEEDED by vendor/lib64/liburee_meta_drmkeyinstall.so
 vendor/lib64/libion_ulit.so # DT_NEEDED by vendor/lib64/libion_mtk.so
 vendor/lib64/libipsec_ims_shr.so # hardware-facing ELF
+vendor/lib64/libisetrusty.so # DT_NEEDED by vendor/bin/mtk_storageproxyd
 vendor/lib64/libispfeature_mtkcam.v4l2.so # DT_NEEDED by vendor/lib64/libcam.halisp.TuningDataProvider.so
 vendor/lib64/libispinterpreter_mtkcam.so # DT_NEEDED by vendor/lib64/libcam.isptuning.v4l2.so
 vendor/lib64/libjpeg-alpha-oal_vendor.so # DT_NEEDED by vendor/lib64/libjpeg-alpha_vendor.so
@@ -962,6 +1003,8 @@ vendor/lib64/libkeymint.so # hardware-facing ELF
 vendor/lib64/libkeymint_tool.so # hardware-facing ELF
 vendor/lib64/libkeystore-engine-wifi-hidl.so # hardware-facing ELF
 vendor/lib64/libkeystore-wifi-hidl.so # hardware-facing ELF
+vendor/lib64/libkphhelper.so # DT_NEEDED by vendor/lib64/libkphproxy.so
+vendor/lib64/libkphproxy.so # DT_NEEDED by vendor/bin/hw/vendor.yft.hardware.obtainvendor@1.0-service
 vendor/lib64/libksensor.so # hardware-facing ELF
 vendor/lib64/libladder.so # DT_NEEDED by vendor/lib64/hw/audio.primary.mediatek.so
 vendor/lib64/liblpnr.so # DT_NEEDED by vendor/lib64/libmtkcam.featurepipe.capture.so
@@ -970,8 +1013,12 @@ vendor/lib64/libmemunreachable.so # DT_NEEDED by vendor/lib64/hw/android.hardwar
 vendor/lib64/libmfllcore.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.so
 vendor/lib64/libmgr3a.adapt.so # DT_NEEDED by vendor/lib64/libcam.hal3a.so
 vendor/lib64/libmipc.so # DT_NEEDED by vendor/lib64/libmtk-ril.so
+vendor/lib64/libmmagent.so # DT_NEEDED by vendor/bin/hw/vendor.mediatek.hardware.mmagent-service
 vendor/lib64/libmml.so # DT_NEEDED by vendor/lib64/libpqhdrmetaparser.so
+vendor/lib64/libmmlpqImpl.so # DT_NEEDED by vendor/bin/hw/vendor.mediatek.hardware.mmlpq@V1-service
+vendor/lib64/libmnl.so # DT_NEEDED by vendor/bin/mnld
 vendor/lib64/libmtk-ril.so # hardware-facing ELF
+vendor/lib64/libmtk_bsg.so # DT_NEEDED by vendor/bin/hw/android.hardware.boot-service.mtk
 vendor/lib64/libmtk_drvb.so # DT_NEEDED by vendor/lib64/libaudiodcrflt_vendor.so
 vendor/lib64/libmtkcam.atmseventmgr.so # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.camera.atms@1.0-impl.so
 vendor/lib64/libmtkcam.debugwrapper.so # DT_NEEDED by vendor/lib64/libMtkMediaController.so
@@ -1023,6 +1070,10 @@ vendor/lib64/libmtkcam_feature_utils.so # DT_NEEDED by vendor/lib64/libmtkcam_co
 vendor/lib64/libmtkcam_grallocutils.so # hardware-facing ELF
 vendor/lib64/libmtkcam_grallocutils_aidlv1helper.so # hardware-facing ELF
 vendor/lib64/libmtkcam_hal3a_provider.so # DT_NEEDED by vendor/lib64/libmtkcam_camcoordinator.so
+vendor/lib64/libmtkcam_hal_aidl_common.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_aidl_device.so
+vendor/lib64/libmtkcam_hal_aidl_device.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_aidl_provider.so
+vendor/lib64/libmtkcam_hal_aidl_provider.so # DT_NEEDED by vendor/bin/hw/camerahalserver
+vendor/lib64/libmtkcam_hal_aidl_utils.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_aidl_device.so
 vendor/lib64/libmtkcam_hal_android_app_cbadaptor.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_android_device.so
 vendor/lib64/libmtkcam_hal_android_common.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_android_provider.so
 vendor/lib64/libmtkcam_hal_android_device.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_android_provider.so
@@ -1106,6 +1157,7 @@ vendor/lib64/libmtkcm_ipc_dummy.so # DT_NEEDED by vendor/lib64/libcam_ipc_hal3a_
 vendor/lib64/libmtkconfig.so # DT_NEEDED by vendor/lib64/libmtkconfigutils.so
 vendor/lib64/libmtkconfigutils.so # DT_NEEDED by vendor/lib64/libmtk-ril.so
 vendor/lib64/libmtkcutils.so # DT_NEEDED by vendor/lib64/libgwsdv2-ril.so
+vendor/lib64/libmtkgpuserv.so # DT_NEEDED by vendor/bin/hw/vendor.mediatek.hardware.gpuserv-service
 vendor/lib64/libmtkhardware_legacy.so # DT_NEEDED by vendor/lib64/libmtk-ril.so
 vendor/lib64/libmtkisp_metadata_v2.so # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.camera.isphal@1.1-impl.so
 vendor/lib64/libmtkisp_metadata_v3.so # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.camera.isphal_aidl@1.0-impl.so
@@ -1122,6 +1174,7 @@ vendor/lib64/libmtktinyxml.so # hardware-facing ELF
 vendor/lib64/libmtkutils.so # DT_NEEDED by vendor/lib64/libgwsdv2-ril.so
 vendor/lib64/libmvpu_wrapper.so # DT_NEEDED by vendor/lib64/libcamalgo.vsf.so
 vendor/lib64/libnbaio_mono.so # DT_NEEDED by vendor/lib64/hw/audio.r_submix.default.so
+vendor/lib64/libneuralnetworks_sl_driver_mtk_prebuilt.so # DT_NEEDED by vendor/bin/hw/android.hardware.neuralnetworks-shim-service-mtk
 vendor/lib64/libneuron_wrapper.so # DT_NEEDED by vendor/lib64/lib3a.af.assist.so
 vendor/lib64/libnvram.so # DT_NEEDED by vendor/lib64/libaudiocustparam_vendor.so
 vendor/lib64/libnvram_sec.so # DT_NEEDED by vendor/lib64/libnvram.so
@@ -1133,6 +1186,7 @@ vendor/lib64/libpixsmart_mf_base2.so # DT_NEEDED by vendor/lib64/libmtkcam_third
 vendor/lib64/libpixsmart_ns.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.customer.so
 vendor/lib64/libpixsmart_vs.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.customer.so
 vendor/lib64/libpixsmart_vs_pose.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.customer.so
+vendor/lib64/libpl.so # DT_NEEDED by vendor/bin/hw/vendor.yft.hardware.obtainvendor@1.0-service
 vendor/lib64/libpower_timer.so # hardware-facing ELF
 vendor/lib64/libpowerhal.so # hardware-facing ELF
 vendor/lib64/libpowerhalwrap_vendor.so # hardware-facing ELF
@@ -1161,10 +1215,13 @@ vendor/lib64/libshmemutil.so # DT_NEEDED by vendor/lib64/libshmemcompat.so
 vendor/lib64/libsilkybrightnesscore.so # DT_NEEDED by vendor/lib64/hw/hwcomposer.mtk_common.so
 vendor/lib64/libsoft_attestation_cert.so # DT_NEEDED by vendor/lib64/libpuresoftkeymasterdevice.so
 vendor/lib64/libstfaceunlock.so # DT_NEEDED by vendor/lib64/hw/face.default.so
+vendor/lib64/libstorage_otp.so # DT_NEEDED by vendor/bin/ccci_mdinit
 vendor/lib64/libsxs_exp_ctrl.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.customer.so
 vendor/lib64/libsxs_ultrawideview.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.customer.so
+vendor/lib64/libsysenv.so # DT_NEEDED by vendor/bin/ccci_mdinit
 vendor/lib64/libteec.so # DT_NEEDED by vendor/lib64/libkeymint_tool.so
 vendor/lib64/libtinycompress.so # hardware-facing ELF
+vendor/lib64/libtranslator_utils.so # DT_NEEDED by vendor/bin/dmc_core
 vendor/lib64/libtrm.so # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.nvram-impl.so
 vendor/lib64/libultrahdr_mtk.so # DT_NEEDED by vendor/lib64/libmtkcam_hwnode.jpegnode.so
 vendor/lib64/liburee_meta_drmkeyinstall.so # hardware-facing ELF
@@ -1210,6 +1267,7 @@ vendor/lib64/mt6878/lib3a.sensors.color.so # hardware-facing ELF
 vendor/lib64/mt6878/lib3a.sensors.flicker.so # hardware-facing ELF
 vendor/lib64/mt6878/lib3a.stat.so # DT_NEEDED by vendor/lib64/libcam.halsensor.so
 vendor/lib64/mt6878/libDBAccessor_ISP.so # DT_NEEDED by vendor/lib64/libcameracustom.camera.isp.so
+vendor/lib64/mt6878/libDR.so # DT_NEEDED by vendor/bin/mnld
 vendor/lib64/mt6878/libMtkMediaController.so # hardware-facing ELF
 vendor/lib64/mt6878/libMtkMediaController_SAL.so # hardware-facing ELF
 vendor/lib64/mt6878/libSonyIMX519PdafWrapper.so # DT_NEEDED by vendor/lib64/libcamera.custom.af_assist_buf_mgr_open.so
@@ -1357,7 +1415,10 @@ vendor/lib64/mt6878/libispinterpreter_mtkcam.so # DT_NEEDED by vendor/lib64/libc
 vendor/lib64/mt6878/liblpnr.so # DT_NEEDED by vendor/lib64/libmtkcam.featurepipe.capture.so
 vendor/lib64/mt6878/libmfllcore.so # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.so
 vendor/lib64/mt6878/libmgr3a.adapt.so # DT_NEEDED by vendor/lib64/libcam.hal3a.so
+vendor/lib64/mt6878/libmmagent.so # DT_NEEDED by vendor/bin/hw/vendor.mediatek.hardware.mmagent-service
 vendor/lib64/mt6878/libmml.so # DT_NEEDED by vendor/lib64/libpqhdrmetaparser.so
+vendor/lib64/mt6878/libmmlpqImpl.so # DT_NEEDED by vendor/bin/hw/vendor.mediatek.hardware.mmlpq@V1-service
+vendor/lib64/mt6878/libmnl.so # DT_NEEDED by vendor/bin/mnld
 vendor/lib64/mt6878/libmtk_drvb.so # DT_NEEDED by vendor/lib64/libaudiodcrflt_vendor.so
 vendor/lib64/mt6878/libmtkcam.atmseventmgr.so # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.camera.atms@1.0-impl.so
 vendor/lib64/mt6878/libmtkcam.debugwrapper.so # DT_NEEDED by vendor/lib64/libMtkMediaController.so
@@ -1403,6 +1464,10 @@ vendor/lib64/mt6878/libmtkcam_faceResultHandler.so # DT_NEEDED by vendor/lib64/l
 vendor/lib64/mt6878/libmtkcam_feature_utils.so # DT_NEEDED by vendor/lib64/libmtkcam_coredev.so
 vendor/lib64/mt6878/libmtkcam_grallocutils.so # hardware-facing ELF
 vendor/lib64/mt6878/libmtkcam_hal3a_provider.so # DT_NEEDED by vendor/lib64/libmtkcam_camcoordinator.so
+vendor/lib64/mt6878/libmtkcam_hal_aidl_common.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_aidl_device.so
+vendor/lib64/mt6878/libmtkcam_hal_aidl_device.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_aidl_provider.so
+vendor/lib64/mt6878/libmtkcam_hal_aidl_provider.so # DT_NEEDED by vendor/bin/hw/camerahalserver
+vendor/lib64/mt6878/libmtkcam_hal_aidl_utils.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_aidl_device.so
 vendor/lib64/mt6878/libmtkcam_hal_android_app_cbadaptor.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_android_device.so
 vendor/lib64/mt6878/libmtkcam_hal_android_common.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_android_provider.so
 vendor/lib64/mt6878/libmtkcam_hal_android_device.so # DT_NEEDED by vendor/lib64/libmtkcam_hal_android_provider.so
@@ -1481,6 +1546,7 @@ vendor/lib64/mt6878/libmtkcam_ulog.so # DT_NEEDED by vendor/lib64/libMtkMediaCon
 vendor/lib64/mt6878/libmtkcam_zsl_customselector.so # DT_NEEDED by vendor/lib64/libmtkcam_android_zslprocessor.so
 vendor/lib64/mt6878/libmtkcm_ipc_dummy.so # DT_NEEDED by vendor/lib64/libcam_ipc_hal3a_client.so
 vendor/lib64/mt6878/libmtkltm.so # DT_NEEDED by vendor/lib64/libmtkcam.featurepipe.capture.so
+vendor/lib64/mt6878/libneuralnetworks_sl_driver_mtk_prebuilt.so # DT_NEEDED by vendor/bin/hw/android.hardware.neuralnetworks-shim-service-mtk
 vendor/lib64/mt6878/libneuron_wrapper.so # DT_NEEDED by vendor/lib64/lib3a.af.assist.so
 vendor/lib64/mt6878/libpda_usdriver.so # DT_NEEDED by vendor/lib64/lib3a.af.assist.so
 vendor/lib64/mt6878/libpq_sec.so # DT_NEEDED by vendor/lib64/hw/hwcomposer.mtk_common.so
@@ -1494,6 +1560,7 @@ vendor/lib64/mt6878/s5kjn1_mipi_raw_IdxMgr.so # DT_NEEDED by vendor/lib64/libcam
 vendor/lib64/mt6878/s5kjn1cts_mipi_raw_IdxMgr.so # DT_NEEDED by vendor/lib64/libcameracustom.imgsensor.core.so
 vendor/lib64/mt6878/s5kjn1main2_mipi_raw_IdxMgr.so # DT_NEEDED by vendor/lib64/libcameracustom.imgsensor.core.so
 vendor/lib64/mtk000_mipi_raw_IdxMgr.so # DT_NEEDED by vendor/lib64/libcameracustom.imgsensor.core.so
+vendor/lib64/mtk_lbs_service-impl.so # DT_NEEDED by vendor/bin/mtk_lbs_service
 vendor/lib64/nfc_nci.st21nfc.st.so # hardware-facing ELF
 vendor/lib64/ov32b40_mipi_raw_IdxMgr.so # DT_NEEDED by vendor/lib64/libcameracustom.imgsensor.core.so
 vendor/lib64/ov64b_mipi_raw_IdxMgr.so # DT_NEEDED by vendor/lib64/libcameracustom.imgsensor.core.so
@@ -1595,6 +1662,9 @@ vendor/lib64/vendor.mediatek.hardware.pq_aidl-V7-ndk.so # hardware-facing ELF
 vendor/lib64/vendor.mediatek.hardware.rcs-V1-ndk.so # hardware-facing ELF
 vendor/lib64/vendor.mediatek.hardware.rcs@2.0.so # hardware-facing ELF
 vendor/lib64/vendor.mediatek.hardware.videotelephony-V1-ndk.so # hardware-facing ELF
+vendor/lib64/vendor.yft.hardware.changenode@1.0.so # DT_NEEDED by vendor/bin/hw/vendor.yft.hardware.changenode@1.0-service
+vendor/lib64/vendor.yft.hardware.gesturewake@1.0.so # DT_NEEDED by vendor/bin/hw/vendor.yft.hardware.gesturewake@1.0-service
+vendor/lib64/vendor.yft.hardware.obtainvendor@1.0.so # DT_NEEDED by vendor/bin/hw/vendor.yft.hardware.obtainvendor@1.0-service
 vendor/lib64/vendor.yft.hardware.sensorcali@1.0.so # hardware-facing ELF
 vendor/lib64/vendor.yft.hardware.sensorcali@2.0.so # hardware-facing ELF
 vendor/lib64/vendor.yft.hardware.tinylcd@1.0.so # hardware-facing ELF

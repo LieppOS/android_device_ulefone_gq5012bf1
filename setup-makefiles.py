@@ -141,12 +141,37 @@ def main() -> int:
         for index, entry in enumerate(apks):
             continuation = " \\" if index != len(apks) - 1 else ""
             lines.append(f"    {module_name(entry)}{continuation}")
+
+    # Excluding a stock path from PRODUCT_COPY_FILES because AOSP provides an
+    # equivalent is only half of the contract: the AOSP module still has to be
+    # requested, or the path is simply absent from the image. Emit the modules
+    # whose name is unambiguously derivable from the stock path. Libraries are
+    # deliberately not listed -- they arrive as transitive dependencies of the
+    # services below, and naming them directly would pin versions by hand.
+    aosp_modules = sorted({
+        Path(entry).name for entry in aosp_replaced
+        if "/etc/permissions/" in entry
+        or "/bin/hw/" in entry
+        or re.fullmatch(r"vendor/bin/[^/]+", entry)
+    })
+    if aosp_modules:
+        lines += [
+            "",
+            "# AOSP modules that replace a stock path (see aosp-replaced-files.txt).",
+            "# Without these the replaced paths would be missing from the image.",
+            "PRODUCT_PACKAGES += \\",
+        ]
+        for index, name in enumerate(aosp_modules):
+            continuation = " \\" if index != len(aosp_modules) - 1 else ""
+            lines.append(f"    {name}{continuation}")
+
     lines += ["", f"PRODUCT_SOONG_NAMESPACES += vendor/{VENDOR}/{DEVICE}", ""]
     (vendor_dir / f"{DEVICE}-vendor.mk").write_text("\n".join(lines))
     print(
-        f"generated vendor makefiles for {len(copies)} copied files and "
-        f"{len(apks)} imported APKs; {len(aosp_replaced)} stock paths use "
-        f"AOSP replacements in {vendor_dir}"
+        f"generated vendor makefiles for {len(copies)} copied files, "
+        f"{len(apks)} imported APKs and {len(aosp_modules)} requested AOSP "
+        f"modules; {len(aosp_replaced)} stock paths use AOSP replacements "
+        f"in {vendor_dir}"
     )
     return 0
 
