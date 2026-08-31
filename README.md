@@ -5,15 +5,17 @@ Android/OrangeFox device tree for the **Ulefone Armor 29 Pro Thermal** (`GQ5012B
 This repository contains the device-specific configuration required to build recovery for the device. Detailed hardware research, partition discoveries, bring-up history, security/FBE analysis, and unresolved research notes are kept in [`Findings.md`](Findings.md).
 
 
-## Production status — Build32
+## Production status — Build34
 
 | item | value |
 |---|---|
-| commit | `52d2f09` |
-| build number | 32 |
-| full vendor_boot sha256 | `cd2aeaa315090d74206a837afba1ce2cb86671c2e7fe94cd01dba84ae5ab9671` |
-| recovery fragment sha256 | `58cb516f80d10f2800807950042e9a869793fde0b456c2c40cec6f4c0fda3104` |
+| commit | `66f5e8c` |
+| build number | 34 |
+| full vendor_boot sha256 | `c5da1ec87979f09579eb45ba73b5c3d53edccb436297d32cfad71edd6c7272c4` |
 | image size | 67108864 bytes (exactly 64 MiB) |
+
+Build32 (`52d2f09`, image `cd2aeaa315090d74206a837afba1ce2cb86671c2e7fe94cd01dba84ae5ab9671`)
+is the previous known-good build, identical except that it has no MTP support.
 
 | feature | status |
 |---|---|
