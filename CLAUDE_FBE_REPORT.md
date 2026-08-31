@@ -186,23 +186,73 @@ flagged it as suspicious on MTK hardware. It is in fact the correct generic AOSP
 implementation and works properly once the sysfs nodes are labelled. No vendor health
 HAL swap was needed.
 
-## MTP — why it is not supported
+## MTP — ported to FunctionFS (Build34)
 
-`TWPartitionManager::Enable_MTP()` unconditionally sets `sys.usb.config=none`, writes
-the legacy `/sys/class/android_usb/android0/{idVendor,idProduct}` nodes, then sets
-`mtp,adb`. This device composes USB through configfs, and the gadget exposes only:
+MTP works and is composed alongside ADB rather than replacing it:
 
 ```text
-/config/usb_gadget/g1/functions -> ffs.adb  ffs.fastboot
+configs/b.1/f1 -> ffs.adb
+configs/b.1/f2 -> ffs.mtp
+host: bNumInterfaces 2, iInterface "ADB Interface" + iInterface "MTP"
 ```
 
-There is no kernel MTP gadget function: `mtp.gs0` cannot be instantiated and
-`/proc/devices` has no MTP entry, so the `/dev/mtp_usb` control node that
-`mtp/ffs/mtp_MtpServer.cpp` opens does not exist. `ffs.mtp` *can* be created, so a
-FunctionFS port is possible in principle, but it needs gadget composition plus init
-handling. Enabling MTP as-is tears the ADB gadget down — which is exactly how the
-original bring-up regression was found. `TW_EXCLUDE_MTP := true` is therefore correct
-and deliberate, and ADB push/pull covers file transfer.
+Verified on hardware: browsable from a Linux desktop file manager with ADB
+still connected.
+
+**No MTP server code was changed.** `mtp_MtpServer.cpp` already prefers
+FunctionFS when `/dev/usb-ffs/mtp/ep0` is writable and only falls back to
+`/dev/mtp_usb` otherwise. That legacy node cannot exist here — the kernel has no
+MTP gadget function, `mtp.gs0` cannot be instantiated, and `/proc/devices` has no
+MTP entry. So this was gadget composition plus a single recovery patch, not a
+rewrite. My earlier assessment that it needed a full FunctionFS port was wrong:
+the port already existed in the tree.
+
+### The sequencing constraint
+
+A FunctionFS function cannot bind to the UDC until its descriptors are written,
+and that only happens once the server opens `ep0`. Binding earlier makes the UDC
+write fail and takes USB down entirely, ADB included. Hence two stages:
+
+1. `gq5012bf1-mtp-setup.sh` (`on boot`) creates `ffs.mtp`, mounts FunctionFS at
+   `/dev/usb-ffs/mtp`, and deliberately does not touch the UDC.
+2. `gq5012bf1-mtp-bind.sh`, triggered by `sys.usb.ffs.mtp.ready=1` which
+   `MtpDescriptors.cpp` sets after writing descriptors, unbinds the UDC, links
+   `ffs.mtp` beside `ffs.adb`, restores the identifiers, and rebinds.
+
+### What failed first, and why
+
+Build33 pre-set `sys.usb.config=mtp,adb` so `Enable_MTP()` would skip its legacy
+block on its own. That broke ADB. Something outside recovery acts on
+`sys.usb.config` and recomposed the gadget as MTP-only:
+
+```text
+idProduct 0x0000, bNumInterfaces 1, bInterfaceClass 6 Imaging, iInterface MTP
+```
+
+MTP worked; ADB was gone. `sys.usb.config` must not be written on this device.
+The correct fix is patching `Enable_MTP()` to skip the legacy `android_usb`
+sequence whenever the FunctionFS endpoint exists, leaving composition to init.
+
+The same active USB manager also owns `idProduct`: writing `0x4ee2` succeeds and
+reads back correctly immediately after rebinding, then reverts to `0xd001`
+unprompted. So the product id cannot be changed from recovery, and `libmtp`
+misidentifying `18d1:d001` as a Meizu Pro 5 is cosmetic.
+
+### Host-side contention
+
+On Linux both the ADB server and the desktop MTP client (KDE `kiod6`, or
+`gvfsd-mtp`) claim the USB device, so `mtp-detect` and `gio` report
+`libusb_claim_interface() reports device is busy`. That is host contention, not a
+device fault — the desktop file manager browses the device fine while ADB stays
+up.
+
+### Build system note
+
+Device inventory tooling clones `erofs-utils` into `device/ulefone/gq5012bf1/.work/`.
+That path is gitignored, but soong does not read `.gitignore` and scans every
+directory for `Android.bp`, so bootstrap aborts with `module ... already defined`.
+`finder.go` treats `.out-dir` and `.find-ignore` as prune markers, so
+`vendorsetup.sh` now drops a `.find-ignore` there automatically.
 
 ## Verified function matrix
 
