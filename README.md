@@ -2174,11 +2174,21 @@ The device vendor policy now declares `persist_data_file` and `protect_f_data_fi
 
 Recovery cannot mount `/data` until Gatekeeper and Keystore2 exist, because the OrangeFox FBE path blocks in `futex_wait_queue` at the splash until they are available. A build that started only `teed` and KeyMint was proven to hang at the logo with `/data` never mounted. TrustKernel secure file storage on `/data/vendor/t6/fs` therefore cannot exist before the trusted applications start, and the stock `prepare`/`ready` handshake cannot be reproduced literally in recovery.
 
-The working arrangement starts `teed` and KeyMint immediately, and starts Gatekeeper separately and later, when `gq5012bf1-tee-storage` announces `vendor.trustkernel.fs.state=ready`. Because `/data` is not yet mounted at that point, that service always reaches its timeout and fail-opens, which produces the delay before Gatekeeper opens its trusted-application session.
+The working arrangement starts `teed` and KeyMint immediately, and starts Gatekeeper only once KeyMint is already running.
 
-Starting Gatekeeper together with KeyMint, as Build25 and Build26 did, reproduces `No suitable auth token found` and `Error::Km(KEY_USER_NOT_AUTHENTICATED)` from Keystore2. The separation is therefore load-bearing and must not be tuned away without re-testing decryption.
+Starting Gatekeeper together with KeyMint, as Build25 and Build26 did, reproduces `No suitable auth token found` and `Error::Km(KEY_USER_NOT_AUTHENTICATED)` from Keystore2. What matters is that the two trusted-application sessions are opened one after the other rather than simultaneously.
 
-Any service that recovery depends on must never be gated behind a property that only becomes true after `/data` is mounted. Doing so deadlocks recovery at the splash. `gq5012bf1-tee-storage` is deliberately fail-open for this reason.
+Any service that recovery depends on must never be gated behind a property that only becomes true after `/data` is mounted. Doing so deadlocks recovery at the splash.
+
+### Build30 serialisation, not delay length, is the decisive factor
+
+Build28 achieved decryption but gated Gatekeeper on `vendor.trustkernel.fs.state=ready`, which in recovery is only reached when `gq5012bf1-tee-storage` times out waiting for `/data`. Every boot therefore stalled at the splash for the full 90 second timeout, and a later reboot appeared to hang. The earlier claim that this delay was load-bearing is withdrawn.
+
+Build30 removes the `/data` dependency from the boot path entirely. Gatekeeper is started from `init.svc.vendor.keymint-3-0-trustkernel=running` after a five second settle, and Keystore2 from `init.svc.vendor.gatekeeper=running`. Nothing in the boot path waits on `gq5012bf1-tee-storage`, which now only stages the teed datapath opportunistically if `/data` appears.
+
+Verified on hardware: recovery reaches a usable state with ADB in about 26 seconds, `/data` is mounted automatically, the full TrustKernel chain reports running, there are no enforcing denials, and entering the PIN once decrypts user-0 data. Reboots are repeatable with no splash hang.
+
+The decisive factor is therefore the ordering of the Gatekeeper and KeyMint trusted-application sessions, not the length of the delay between them.
 
 ### Build28 KeyMint TrustKernel command identifiers
 

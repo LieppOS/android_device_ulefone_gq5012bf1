@@ -15,6 +15,9 @@
 # found". tee_userinit runs once per secure-world lifetime, so storage has to
 # be correct before teed starts for the first time.
 
+# NOTHING IN THE BOOT PATH IS GATED ON THIS SCRIPT. It runs in the background
+# and only stages the teed datapath if and when /data appears. Recovery must
+# never wait on a property that only this script can set.
 WAIT=0
 LIMIT=90
 
