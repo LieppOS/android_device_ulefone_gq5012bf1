@@ -157,9 +157,20 @@ TARGET_USERIMAGES_USE_F2FS := true
 # We will replace this with the stock-derived fstab.
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 
+# Main display geometry. Besides documenting the verified panel size, these
+# let the globally scanned OrangeFox Soong plugin select a harmless theme while
+# parsing a full-ROM product in a mixed recovery checkout.
+TARGET_SCREEN_WIDTH := 1080
+TARGET_SCREEN_HEIGHT := 2400
+
 # -------------------------------------------------
 # Recovery UI / debugging
 # -------------------------------------------------
+
+# Everything in this section is recovery-specific. A full ROM target must not
+# inherit OrangeFox plugins, TW_* behavior, permissive missing-dependency flags,
+# or recovery-only crypto/UI configuration.
+ifneq ($(filter twrp_%,$(TARGET_PRODUCT)),)
 
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
 
@@ -260,5 +271,14 @@ TW_INCLUDE_CRYPTO_FBE := true
 TW_INCLUDE_FBE_METADATA_DECRYPT := true
 TW_USE_FSCRYPT_POLICY := 2
 
+endif # twrp_* recovery product
+
 # Device-specific vendor SELinux policy
 BOARD_VENDOR_SEPOLICY_DIRS += device/ulefone/gq5012bf1/sepolicy/vendor
+
+# Recovery intentionally does not define logical partition image filesystems:
+# doing so makes the recovery ramdisk staging path create conflicting vendor
+# outputs. Full ROM products need the stock super/EROFS/AVB contract instead.
+ifeq ($(filter twrp_%,$(TARGET_PRODUCT)),)
+include $(DEVICE_PATH)/BoardConfigRom.mk
+endif
