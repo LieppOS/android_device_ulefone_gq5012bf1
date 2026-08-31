@@ -40,7 +40,7 @@ is the previous known-good build, identical except that it has no MTP support.
 | logs | working — `/tmp/recovery.log`, `dmesg`, `logcat` all populated, `logd` running |
 | time / RTC | working — device UTC matches host wall clock |
 | thermal | battery temperature sane (28-37 C), no thermal HAL crash loop |
-| vibration | not tested |
+| vibration | working — brightness-only LED vibrator, driven with a userspace timeout |
 | screenshot | not tested |
 
 ### Battery deliverable
@@ -149,6 +149,27 @@ error: external/erofs-utils/Android.bp:34:1: module "external_erofs-utils_licens
 and `.find-ignore` as prune markers. Keep that file in place, and recreate it if
 the inventory tooling ever removes it.
 
+### Vibration on a brightness-only LED vibrator
+
+The device exposes its vibrator as a plain LED class device:
+
+```text
+/sys/class/leds/vibrator/brightness      writing >0 starts the motor
+/sys/class/leds/vibrator/max_brightness  255
+```
+
+TWRP knows only two vibrator interfaces, `timed_output/vibrator/enable` and the
+`leds/vibrator/duration` plus `activate` pair. This device has neither, so
+haptics silently failed with `Cannot find file /sys/class/timed_output/vibrator/enable`.
+
+`patches/bootable_recovery/0003-vibrate-support-brightness-only-led-vibrator.patch`
+adds a third branch to `vibrate()` in `minuitwrp/events.cpp`. A brightness node
+never stops on its own, so the timeout is enforced in userspace: write
+`max_brightness`, then clear it from a detached thread so the input path never
+blocks. An atomic counter separate from the QTI `vib_on_count`, which only exists
+under `USE_QTI_AIDL_HAPTICS_FIX_OFF`, prevents an earlier timer from cutting a
+later buzz short.
+
 ### Known limitations
 
 - **MTP requires the host to not fight over the device.** On a Linux host both
@@ -162,6 +183,25 @@ the inventory tooling ever removes it.
 - Two harmless enforcing denials remain, both directory reads of `rootfs` by
   `hal_health_default` and `hal_bootctl_default`. Both HALs function correctly;
   granting `rootfs` directory read was rejected as too broad for no benefit.
+- **USB drops for roughly 40 seconds right after the PIN is entered.** Adding a
+  FunctionFS function to a live gadget requires unbinding and rebinding the UDC,
+  so the host re-enumerates and ADB reconnects. The bind script itself takes
+  0.149 s; the rest is host-side re-enumeration. This is inherent to composing
+  MTP at runtime: MTP cannot start before `/data` is decrypted, so the only
+  alternative would be withholding ADB until the PIN is entered.
+- **A `/auto0` mount error appears at login.** `recovery.fstab:56` uses a
+  wildcard `voldmanaged` entry that expands to both the raw SD disk `mmcblk0`,
+  which has a partition table rather than a filesystem, and `mmcblk0p1`, which
+  mounts correctly as `/auto0-1`. Mounting the raw disk returns `EOVERFLOW`,
+  reported by the GUI as a value-too-large error. It is cosmetic and
+  pre-existing; MTP only made it visible because it enumerates every storage
+  entry. The SD card works. Lines 58-60 do the same for USB OTG, producing
+  `/auto1` to `/auto3`.
+- **Post-install vibration does not fire.** `data.cpp:1761` writes a duration
+  value to `/sys/class/timed_output/vibrator/enable`, which does not exist here.
+  It was left alone deliberately: this device's vibrator is a brightness node
+  with no auto-stop, so writing a duration to it would set the brightness to
+  that number and vibrate continuously. UI haptics are unaffected.
 
 ### gq5012bf1-tee-storage is retained, not obsolete
 

@@ -1,0 +1,60 @@
+diff --git a/minuitwrp/events.cpp b/minuitwrp/events.cpp
+index e497df6..4d8d0b7 100644
+--- a/minuitwrp/events.cpp
++++ b/minuitwrp/events.cpp
+@@ -27,6 +27,10 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <fstream>
++/* Needed unconditionally by the brightness-only LED vibrator path below, which
++ * is not tied to any QTI haptics configuration. */
++#include <atomic>
++#include <thread>
+ #ifdef USE_QTI_AIDL_HAPTICS_FIX_OFF
+ #include <thread>
+ #endif
+@@ -64,6 +68,17 @@ static std::atomic_int vib_on_count = 0;
+ #define LEDS_HAPTICS_DURATION_FILE	"/sys/class/leds/vibrator/duration"
+ #define LEDS_HAPTICS_ACTIVATE_FILE	"/sys/class/leds/vibrator/activate"
+ 
++/* Some devices expose the vibrator as a plain LED class device with only a
++ * brightness attribute: no timed_output enable file and no duration/activate
++ * pair. Writing brightness starts the motor and it runs until brightness is
++ * written back to zero, so the timeout has to be enforced in userspace. */
++#define LEDS_HAPTICS_BRIGHTNESS_FILE	"/sys/class/leds/vibrator/brightness"
++#define LEDS_HAPTICS_MAX_BRIGHTNESS_FILE	"/sys/class/leds/vibrator/max_brightness"
++
++/* Separate from the QTI vib_on_count, which only exists under
++ * USE_QTI_AIDL_HAPTICS_FIX_OFF. */
++static std::atomic_int led_vib_on_count = 0;
++
+ #ifndef SYN_REPORT
+ #define SYN_REPORT          0x00
+ #endif
+@@ -185,6 +200,26 @@ int vibrate(int timeout_ms)
+     if (std::ifstream(LEDS_HAPTICS_ACTIVATE_FILE).good()) {
+         write_to_file(LEDS_HAPTICS_DURATION_FILE, tout);
+         write_to_file(LEDS_HAPTICS_ACTIVATE_FILE, "1");
++    } else if (std::ifstream(LEDS_HAPTICS_BRIGHTNESS_FILE).good()) {
++        /* Brightness-only LED vibrator. The motor does not stop on its own, so
++         * drive it at full scale and clear it from a detached timer thread.
++         * The write must not block the input path. vib_on_count guards
++         * overlapping calls so an earlier timer cannot cut a later buzz short. */
++        std::string max_brightness("255");
++        {
++            std::ifstream mb(LEDS_HAPTICS_MAX_BRIGHTNESS_FILE);
++            std::string value;
++            if (mb.good() && std::getline(mb, value) && !value.empty())
++                max_brightness = value;
++        }
++        write_to_file(LEDS_HAPTICS_BRIGHTNESS_FILE, max_brightness);
++        led_vib_on_count++;
++        std::thread([timeout_ms] {
++            usleep(timeout_ms * 1000);
++            led_vib_on_count--;
++            if (!led_vib_on_count)
++                write_to_file(LEDS_HAPTICS_BRIGHTNESS_FILE, "0");
++        }).detach();
+     } else
+         write_to_file(VIBRATOR_TIMEOUT_FILE, tout);
+ #endif

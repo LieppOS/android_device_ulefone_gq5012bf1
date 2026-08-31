@@ -66,5 +66,6 @@ if [ -n "$ANDROID_BUILD_TOP" ]; then
     _gq_apply_patch "$ANDROID_BUILD_TOP/system/sepolicy" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/system_sepolicy/0001-recovery-read-vold-metadata-key.patch" "recovery metadata SELinux patch" || return 1
     _gq_apply_patch "$ANDROID_BUILD_TOP/bootable/recovery" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/bootable_recovery/0001-twrp-ramdisk-require-vendor-property-contexts.patch" "recovery property-context dependency patch" || return 1
     _gq_apply_patch "$ANDROID_BUILD_TOP/bootable/recovery" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/bootable_recovery/0002-mtp-skip-legacy-usb-when-functionfs.patch" "MTP FunctionFS USB patch" || return 1
+    _gq_apply_patch "$ANDROID_BUILD_TOP/bootable/recovery" "$ANDROID_BUILD_TOP/device/ulefone/gq5012bf1/patches/bootable_recovery/0003-vibrate-support-brightness-only-led-vibrator.patch" "brightness-only LED vibrator patch" || return 1
     unset -f _gq_apply_patch
 fi
