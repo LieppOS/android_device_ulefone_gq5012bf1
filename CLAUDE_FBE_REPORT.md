@@ -119,3 +119,122 @@ fastboot flash vendor_boot_a <build30 img>
 ```
 
 Build30 recovery fragment `040a9e349e41ee4f1dcf048cdc562e2249b966bdc8c3b10fedcbded877da5d55`.
+
+
+---
+
+# Part 2 — Production bring-up (Build32)
+
+FBE was the prerequisite; this part covers making the recovery actually usable.
+Build32 artifact `cd2aeaa315090d74206a837afba1ce2cb86671c2e7fe94cd01dba84ae5ab9671`,
+commit `52d2f09`.
+
+## Battery — root cause and fix
+
+OrangeFox does not read battery from sysfs on this branch. `TW_USE_LEGACY_BATTERY_SERVICES`
+is not set, so `twrp.cpp` calls `GetBatteryInfo()`, which goes through the health HAL.
+
+The HAL enumerates `/sys/class/power_supply/*` and reads each node's `type` file to
+find the battery. Those files carried the generic `sysfs` label:
+
+```text
+avc: denied { read } for name="type" dev="sysfs"
+  scontext=u:r:hal_health_default:s0 tcontext=u:object_r:sysfs:s0
+  tclass=file permissive=0
+W healthd : No battery devices found
+W healthd : battery none chg=
+```
+
+`getCapacity()` therefore failed, `capacity` stayed `INT32_MIN`, and
+`battery_utils.cpp` substituted its no-battery fallback:
+
+```text
+W recovery: Using fake battery capacity 100.     <- real level was 78
+```
+
+Fix: label the power_supply nodes `sysfs_batteryinfo` via `genfscon`. **No new allow
+rule was required** — `hal_health.te` already contains
+`r_dir_file(hal_health_server, sysfs_batteryinfo)`. Because `/sys/class/power_supply/*`
+are symlinks and SELinux labels the target inodes, each real device path is listed
+individually rather than labelling a broad sysfs prefix. The MediaTek
+`gftk_charger_type` node, polled continuously by the HAL, sits directly under the
+charger platform device and is labelled as a single exact file.
+
+Result: `GetBatteryInfo() reporting charging 1, capacity 78`, then `79` later in the
+session — matching sysfs and updating live.
+
+## Corrections to the mission brief
+
+Two premises in the brief did not survive contact with the hardware.
+
+**`gq5012bf1-tee-storage` is not obsolete.** The brief described a ~90 second wait for
+a `/data` that "cannot exist at that point". That was Build28 behaviour. Under the
+Build30 ordering `/data` mounts early and the service now completes normally:
+
+```text
+Service 'gq5012bf1-tee-storage' (pid 489) exited with status 0
+  oneshot service took 7.348000 seconds in background
+/data/vendor/t6/fs  -> tkcore_data_file
+/data/vendor/t6/app -> tkcore_spta_file
+```
+
+It stages teed's datapath with correct labels, so it was kept per the brief's own rule
+that nothing be removed until evidence confirms it obsolete.
+
+**`android.hardware.health-service.example_recovery` was not the problem.** The brief
+flagged it as suspicious on MTK hardware. It is in fact the correct generic AOSP
+implementation and works properly once the sysfs nodes are labelled. No vendor health
+HAL swap was needed.
+
+## MTP — why it is not supported
+
+`TWPartitionManager::Enable_MTP()` unconditionally sets `sys.usb.config=none`, writes
+the legacy `/sys/class/android_usb/android0/{idVendor,idProduct}` nodes, then sets
+`mtp,adb`. This device composes USB through configfs, and the gadget exposes only:
+
+```text
+/config/usb_gadget/g1/functions -> ffs.adb  ffs.fastboot
+```
+
+There is no kernel MTP gadget function: `mtp.gs0` cannot be instantiated and
+`/proc/devices` has no MTP entry, so the `/dev/mtp_usb` control node that
+`mtp/ffs/mtp_MtpServer.cpp` opens does not exist. `ffs.mtp` *can* be created, so a
+FunctionFS port is possible in principle, but it needs gadget composition plus init
+handling. Enabling MTP as-is tears the ADB gadget down — which is exactly how the
+original bring-up regression was found. `TW_EXCLUDE_MTP := true` is therefore correct
+and deliberate, and ADB push/pull covers file transfer.
+
+## Verified function matrix
+
+Working and proven on hardware: cold-boot FBE decrypt under enforcing SELinux with a
+single PIN; battery percentage/status/temperature with live updates; touch; ADB
+including push and pull; fastbootd (`is-userspace: yes`); internal storage read/write
+after decrypt; external SD (59 GB exFAT, auto-mounted at `/auto0-1` via `exfat-fuse`,
+read/write verified); dynamic partitions `system`/`system_ext`/`product`/`vendor`
+mounting read-only; slot display `_a`; backup (boot partition, 64 MB, digest, 2 s);
+logs; RTC.
+
+Explicitly **not** verified, and not claimed: charging-state transition to
+`Discharging` (charger could not be removed); USB OTG (no device attached); restore;
+ADB sideload; vibration; screenshot; the brightness UI slider (the sysfs node reads
+1024 of max 2047, but the slider itself was not exercised).
+
+`odm` has no logical partition — `/dev/block/mapper` exposes `odm_dlkm_a/b` but no
+`odm_a` — so a failed `odm` mount is by design.
+
+## Remaining denials
+
+Two enforcing denials remain, both `rootfs` directory reads by `hal_health_default`
+and `hal_bootctl_default`. Both HALs function correctly. Granting `rootfs` directory
+read was rejected as too broad for no functional benefit.
+
+## Packaging
+
+`build-gq5012bf1.sh <n> full` now produces the flashable image in one command:
+builds the recovery fragment, splices it into a full vendor_boot v4 preserving the
+stock PLATFORM fragment and stock DTB, appends the AVB footer, verifies both
+invariants and the exact 64 MiB size, prints path and SHA256, and warns that
+`out/target/product/gq5012bf1/vendor_boot.img` is not flashable. It never flashes.
+`vbrepack.py` and `vbunpack.py` are vendored into `tools/`; `vbunpack.py` was fixed to
+print the full DTB SHA256 so the invariant check can actually match it (it previously
+truncated to 16 characters, which silently defeated the check).
