@@ -209,11 +209,15 @@ def main() -> int:
         "# Generated from stock VINTF/init/HAL/module/config evidence and ELF closure.",
         "",
     ]
+    # Evidence is emitted as a preceding comment line, never as an inline
+    # comment: Lineage extract-utils parses `;` and `:` inside an entry as
+    # argument/destination separators, so evidence text must not share the line.
     for partition in sorted(grouped):
         lines += [f"# {partition}"]
         for runtime in grouped[partition]:
             why = "; ".join(sorted(reasons[runtime]))
-            lines.append(f"{runtime} # {why}")
+            lines.append(f"# {why}")
+            lines.append(runtime)
         lines.append("")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("\n".join(lines))

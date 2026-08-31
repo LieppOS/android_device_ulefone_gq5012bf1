@@ -1,5 +1,7 @@
-# Stock paths intentionally provided by AOSP build modules
+# Stock paths intentionally provided by AOSP build modules.
 # Generated from strict duplicate-output analysis; see docs/blob-map.md.
+# Each path remains in proprietary-files.txt with ;EXTRACT_ONLY so Lineage
+# extract-utils preserves the stock inventory without emitting a duplicate.
 vendor/bin/boringssl_self_test64
 vendor/bin/hw/android.hardware.biometrics.face-service.example
 vendor/bin/hw/android.hardware.contexthub-service.tinysys
@@ -13,6 +15,14 @@ vendor/bin/vndservicemanager
 vendor/etc/init/android.hardware.drm-service.clearkey.rc
 vendor/etc/init/android.hardware.health-service.example.rc
 vendor/etc/init/android.hardware.ir-service.example.rc
+# VINTF fragments installed by the AOSP services listed above.
+vendor/etc/vintf/manifest/android.hardware.drm-service.clearkey.xml
+vendor/etc/vintf/manifest/android.hardware.ir-service.example.xml
+vendor/etc/vintf/manifest/android.hardware.health-service.example.xml
+vendor/etc/vintf/manifest/android.hardware.sensors-multihal.xml
+vendor/etc/vintf/manifest/android.hardware.wifi-service.xml
+# The ROM Bluetooth audio HAL declares IBluetoothAudioProviderFactory itself.
+vendor/etc/vintf/manifest/bluetooth_audio.xml
 vendor/etc/init/android.hardware.sensors-service-multihal.rc
 vendor/etc/init/android.hardware.wifi-service-lazy.rc
 vendor/etc/init/boringssl_self_test.rc

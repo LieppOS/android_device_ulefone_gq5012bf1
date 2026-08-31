@@ -176,18 +176,33 @@ def elf_info(path: str):
 # --------------------------------------------------------------------------
 
 def read_list(path: str):
+    """Installed paths from a Lineage extract-utils file list.
+
+    Understands the standard `-package`, `src:dst`, `|hash` and `;ARG[=value]`
+    syntax. `SYMLINK=` aliases install additional paths and are returned too,
+    so the dependency graph still sees every runtime path the stock image has.
+    """
     out = []
     if not os.path.exists(path):
         return out
     with open(path) as fh:
         for line in fh:
-            line = line.split("#")[0].strip()
+            line = line.split("#")[0].strip().lstrip("-")
             if not line:
                 continue
-            line = line.lstrip("-").split("|")[0].strip()
-            if ":" in line:
-                line = line.split(":", 1)[1]
-            out.append(line)
+            fields = line.split(";")
+            entry = fields[0].split("|")[0].strip()
+            if ":" in entry:
+                entry = entry.split(":", 1)[1]
+            out.append(entry)
+            for field in fields[1:]:
+                field = field.strip()
+                if field.startswith("SYMLINK="):
+                    out.extend(
+                        alias
+                        for alias in field[len("SYMLINK="):].split(",")
+                        if alias
+                    )
     return out
 
 

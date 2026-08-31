@@ -40,14 +40,19 @@ def stock_source(root: Path, runtime: str) -> Path | None:
 
 
 def proprietary_entries(path: Path) -> set[str]:
+    """Return installed paths from a Lineage extract-utils file list."""
     entries: set[str] = set()
     for line in text(path).splitlines():
-        value = line.split("#", 1)[0].strip()
+        value = line.split("#", 1)[0].strip().lstrip("-")
         if not value:
             continue
-        value = value.split(";", 1)[0]
-        value = value.split(":", 1)[0]
-        entries.add(value.lstrip("-"))
+        fields = value.split(";")
+        source_destination = fields[0].split("|", 1)[0]
+        source, separator, destination = source_destination.partition(":")
+        entries.add(destination if separator else source)
+        for field in fields[1:]:
+            if field.startswith("SYMLINK="):
+                entries.update(field.removeprefix("SYMLINK=").split(","))
     return entries
 
 
@@ -81,8 +86,16 @@ def main() -> int:
     policy = text(device / "sepolicy/vendor/trustkernel.te")
     product_files = [device / "lineage_gq5012bf1.mk", device / "liepp_gq5012bf1.mk"]
 
+    extract_script = text(device / "extract-files.py")
+    setup_script = text(device / "setup-makefiles.py")
     check("full-product", any(path.is_file() for path in product_files), "full ROM product makefile exists")
-    check("extraction", (device / "extract-files.py").is_file() and (device / "setup-makefiles.py").is_file(), "modern extraction entry points exist")
+    check(
+        "extraction",
+        "ExtractUtilsModule" in extract_script
+        and "ExtractUtils.device" in extract_script
+        and setup_script.startswith("#!./extract-files.py --regenerate_makefiles"),
+        "Lineage extract-utils entry points are configured",
+    )
     check("proprietary-list", bool(entries), f"{len(entries)} proprietary entries")
     check("aosp-replacements", bool(aosp_replaced) and aosp_replaced <= entries, f"{len(aosp_replaced)} stock paths intentionally inherited from AOSP modules")
     check("ab-ota", "AB_OTA_UPDATER := true" in board and "vendor_boot" in board, "A/B OTA and vendor_boot configured")
