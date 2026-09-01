@@ -154,124 +154,16 @@ BOARD_RAMDISK_USE_LZ4 := true
 TARGET_USERIMAGES_USE_EXT4 := true
 TARGET_USERIMAGES_USE_F2FS := true
 
-# We will replace this with the stock-derived fstab.
+# Stock-derived fstab.
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 
-# Main display geometry. Besides documenting the verified panel size, these
-# let the globally scanned OrangeFox Soong plugin select a harmless theme while
-# parsing a full-ROM product in a mixed recovery checkout.
+# -------------------------------------------------
+# Display
+# -------------------------------------------------
+
+# Panel is 1080x2400 at density 480.
 TARGET_SCREEN_WIDTH := 1080
 TARGET_SCREEN_HEIGHT := 2400
-
-# -------------------------------------------------
-# Recovery UI / debugging
-# -------------------------------------------------
-
-# Everything in this section is recovery-specific. A full ROM target must not
-# inherit OrangeFox plugins, TW_* behavior, permissive missing-dependency flags,
-# or recovery-only crypto/UI configuration.
-ifneq ($(filter twrp_%,$(TARGET_PRODUCT)),)
-
-TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
-
-# Panel is 1080x2400, density 480 (verified live: `wm size` / `wm density`).
-TW_THEME := portrait_hdpi
-
-# Backlight, verified from the stock vendor_boot DTB:
-#   mtk-leds { compatible = "mediatek,disp-leds";
-#     backlight { label = "lcd-backlight";
-#                 max-brightness  = <0x7ff>;   /* 2047 */
-#                 min-brightness  = <0x4>;
-#                 max-hw-brightness = <0x7ff>; } }
-# The driver behind it (leds-mtk-disp.ko) is in the stock
-# modules.load.recovery list, so the class device exists in recovery.
-TW_MAX_BRIGHTNESS := 2047
-TW_DEFAULT_BRIGHTNESS := 1024
-TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
-
-# HW TEST 1 (build 10) finding: the recovery USB gadget enumerated as
-# 18d1:d001 "Ulefone / Armor 29 Pro Thermal" and was then torn down ~2s later,
-# so adbd never became reachable.
-#
-# Cause: two USB stacks fighting for the same UDC.
-#   - stock init.recovery.mt6878.rc  -> setprop sys.usb.configfs 1
-#                                       setprop sys.usb.controller 11201000.usb0
-#     i.e. the modern configfs gadget path in init.rc
-#   - TWRP's init.recovery.usb.rc    -> writes /sys/class/android_usb/android0/*
-#     i.e. the legacy android_usb gadget path
-#
-# Drop the legacy one and keep the stock MediaTek configfs path.
-# bootable/recovery/etc/Android.mk:17 and Android.mk:624 gate the install of
-# init.recovery.usb.rc on exactly this variable.
-TW_EXCLUDE_DEFAULT_USB_INIT := true
-
-# HW TEST 2 (build 13) finding: the ADB gadget STILL died ~3s after boot, so the
-# line above is correct hygiene but was NOT sufficient. The next evidence-backed
-# root-cause candidate is automatic MTP startup:
-#
-#   data.cpp:1449            tw_mtp_enabled defaults to 1 when TW_HAS_MTP
-#   twrp.cpp:295             at startup, if tw_mtp_enabled -> Enable_MTP()
-#   partitionmanager.cpp     Enable_MTP() does:
-#       property_set(sys.usb.config, none)              <- tears the gadget down
-#       write /sys/class/android_usb/android0/idVendor  <- LEGACY sysfs path
-#       write /sys/class/android_usb/android0/idProduct <- LEGACY sysfs path
-#       property_set(sys.usb.config, mtp,adb)           <- recompose
-#
-# GQ5012BF1 is a configfs device (stock sets sys.usb.configfs=1), so those
-# android_usb writes target the wrong interface. If the subsequent mtp,adb
-# property transition cannot rebuild the configfs gadget, ADB will remain down.
-# Host timing matches this path: 18d1:d001 appears, then a permanent disconnect
-# ~3s later as the OrangeFox UI finishes starting. Build 14 tests this hypothesis.
-#
-# MTP is enabled over FunctionFS, which is the configfs path this device needs.
-# The legacy route in the comment above genuinely does not work here: the kernel
-# has no MTP gadget function, mtp.gs0 cannot be instantiated, /proc/devices has
-# no MTP entry, and so /dev/mtp_usb never exists.
-#
-# No recovery code change is required. mtp_MtpServer.cpp already prefers
-# FunctionFS whenever /dev/usb-ffs/mtp/ep0 is writable and only falls back to
-# the legacy node otherwise, so the port is purely gadget composition, done by
-# init.recovery.gq5012bf1.usb.rc plus gq5012bf1-mtp-setup.sh and
-# gq5012bf1-mtp-bind.sh.
-#
-# Enable_MTP()'s legacy android_usb sequence is skipped by pre-setting
-# sys.usb.config to mtp,adb, which is the condition it checks before running it.
-# That is what keeps the ADB gadget from being torn down.
-TW_MTP_DEVICE := /dev/usb-ffs/mtp/ep0
-
-TW_INCLUDE_FASTBOOTD := true
-TW_INCLUDE_REPACKTOOLS := true
-TW_INCLUDE_RESETPROP := true
-
-TWRP_INCLUDE_LOGCAT := true
-TARGET_USES_LOGD := true
-
-TW_EXCLUDE_TWRPAPP := true
-
-# Useful for vendor_boot based devices.
-
-# -------------------------------------------------
-# Initial bring-up
-# -------------------------------------------------
-
-ALLOW_MISSING_DEPENDENCIES := true
-BUILD_BROKEN_DUP_RULES := true
-BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
-
-# OrangeFox/TWRP legacy Soong plugins required by the Android 14 recovery tree.
-BUILD_BROKEN_PLUGIN_VALIDATION := \
-    soong-libaosprecovery_defaults \
-    soong-libguitwrp_defaults \
-    soong-libminuitwrp_defaults \
-    soong-vold_defaults
-
-# File-based encryption (FBE)
-TW_INCLUDE_CRYPTO := true
-TW_INCLUDE_CRYPTO_FBE := true
-TW_INCLUDE_FBE_METADATA_DECRYPT := true
-TW_USE_FSCRYPT_POLICY := 2
-
-endif # twrp_* recovery product
 
 # -------------------------------------------------
 # SELinux
