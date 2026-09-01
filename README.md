@@ -68,7 +68,7 @@ Known limitations:
 | Repository | Contents |
 |---|---|
 | [`OrangeFox-Ulefone-GQ5012BF1`](https://github.com/LieppOS/OrangeFox-Ulefone-GQ5012BF1) | OrangeFox recovery overlay, packaging and releases |
-| [`ulefone-gq5012bf1-research`](https://github.com/LieppOS/ulefone-gq5012bf1-research) | reverse-engineering evidence, bring-up history and audit tooling |
+| [`LieppOS-ulefone-gq5012bf1-research`](https://github.com/LieppOS/LieppOS-ulefone-gq5012bf1-research) | reverse-engineering evidence, bring-up history and audit tooling |
 
 Building OrangeFox for this device uses this tree plus the overlay from the
 OrangeFox repository; see its README.
