@@ -38,7 +38,7 @@ lib_fixups: lib_fixups_user_type = {
 # modules on every branch this tree is parsed in, and synthesising link
 # metadata for them changes nothing about what is installed. Blobs are
 # therefore installed at their exact stock paths, which is also the state the
-# offline ELF closure audit in tools/elf_closure.py was validated against.
+# offline ELF dependency closure audit was validated against.
 # Enabling it is future hardening, to be done with evidence on the target
 # Android 15 branch.
 module = ExtractUtilsModule(

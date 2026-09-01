@@ -1117,9 +1117,9 @@ vendor/lib64/android.hardware.audio@7.1-util.so;EXTRACT_ONLY
 vendor/lib64/android.hardware.audio@7.1.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so
 vendor/lib64/android.hardware.biometrics.common-V3-ndk.so;EXTRACT_ONLY
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/android.hardware.biometrics.common.thread.so;EXTRACT_ONLY
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/android.hardware.biometrics.common.util.so;EXTRACT_ONLY
 # hardware-facing ELF
 vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so;EXTRACT_ONLY
@@ -1521,13 +1521,13 @@ vendor/lib64/libcamera2ndk_vendor.so;EXTRACT_ONLY
 vendor/lib64/libccci_util.so
 # DT_NEEDED by vendor/lib64/libcodec2_mtk_vdec.so
 vendor/lib64/libcodec2_fsr.so
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/libcodec2_hidl@1.0.so;EXTRACT_ONLY
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/libcodec2_hidl@1.1.so;EXTRACT_ONLY
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/libcodec2_hidl@1.2.so;EXTRACT_ONLY
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/libcodec2_hidl_plugin.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
 vendor/lib64/libcodec2_mtk_c2store.so
@@ -1535,7 +1535,7 @@ vendor/lib64/libcodec2_mtk_c2store.so
 vendor/lib64/libcodec2_mtk_vdec.so
 # DT_NEEDED by vendor/bin/hw/android.hardware.media.c2@1.2-mediatek-64b
 vendor/lib64/libcodec2_mtk_venc.so
-# provided by an AOSP module; see aosp-replaced-files.txt
+# provided by an AOSP module
 vendor/lib64/libcodec2_soft_common.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libcodec2_mtk_venc.so
 vendor/lib64/libcodec2_vpp_fa_plugin.so
