@@ -1,7 +1,4 @@
-*.log
-
-# Local stock/snapshot analysis workspace. Source evidence is immutable and
-# intentionally kept outside git; only curated tooling and reports are tracked.
-.work/
+# Local analysis and build scratch space.
 __pycache__/
 *.pyc
+*.log
