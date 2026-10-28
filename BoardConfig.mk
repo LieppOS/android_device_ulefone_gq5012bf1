@@ -218,13 +218,18 @@ BOARD_MAIN_PARTITION_LIST := \
     odm_dlkm
 BOARD_BUILD_SUPER_IMAGE_BY_DEFAULT := true
 
-# Preserve the stock vbmeta split. Release builds must provide intentional
-# project keys; never copy or fabricate Ulefone private signing material.
+# Preserve the stock vbmeta split exactly as recorded from the live slot-B
+# vbmeta images: dtbo, init_boot, vendor_boot, odm_dlkm, product, system_dlkm,
+# system_ext and vendor_dlkm are descriptors in the root vbmeta; system is the
+# only chain partition of vbmeta_system, and vendor the only chain partition of
+# vbmeta_vendor. Locations 2 and 4 match the stock chain descriptors.
+# Release builds must provide intentional project keys; never copy or fabricate
+# Ulefone private signing material.
 BOARD_AVB_ENABLE := true
-BOARD_AVB_VBMETA_SYSTEM := system system_ext product
-BOARD_AVB_VBMETA_VENDOR := vendor vendor_dlkm odm_dlkm
-BOARD_AVB_VBMETA_SYSTEM_ROLLBACK_INDEX_LOCATION := 1
-BOARD_AVB_VBMETA_VENDOR_ROLLBACK_INDEX_LOCATION := 2
+BOARD_AVB_VBMETA_SYSTEM := system
+BOARD_AVB_VBMETA_VENDOR := vendor
+BOARD_AVB_VBMETA_SYSTEM_ROLLBACK_INDEX_LOCATION := 2
+BOARD_AVB_VBMETA_VENDOR_ROLLBACK_INDEX_LOCATION := 4
 
 # -------------------------------------------------
 # VINTF
