@@ -18,8 +18,8 @@ PRODUCT_SOONG_NAMESPACES += \
     $(DEVICE_PATH)
 
 # Android 14/15 recovery/full-ROM trees still need the explicit Treble override.
-# Android 17 makes Treble mandatory and rejects the obsolete variable.
-ifeq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
+# Android 16/17 make Treble mandatory and reject the obsolete variable.
+ifeq ($(filter 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_FULL_TREBLE_OVERRIDE := true
 endif
 
@@ -112,9 +112,9 @@ PRODUCT_PACKAGES += \
     android.hardware.usb.host.prebuilt.xml \
     lsusb
 
-# VINTF is always enforced on Android 17; keep the explicit declaration for the
-# Android 14/15 full-ROM trees.
-ifeq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
+# VINTF is always enforced on Android 16/17; keep the explicit declaration for
+# the Android 14/15 full-ROM trees.
+ifeq ($(filter 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_ENFORCE_VINTF_MANIFEST := true
 endif
 
