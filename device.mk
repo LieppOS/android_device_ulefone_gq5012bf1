@@ -108,6 +108,12 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.telephony.ims.prebuilt.xml
 
+# WiFi supplicant
+# The stock vendor binary is EXTRACT_ONLY; build the Android 17 source
+# supplicant at /vendor/bin/hw/wpa_supplicant instead.
+PRODUCT_PACKAGES += \
+    wpa_supplicant
+
 # USB
 # lsusb is provided by the toybox applet set, not as a standalone module.
 PRODUCT_PACKAGES += \
