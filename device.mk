@@ -56,8 +56,9 @@ PRODUCT_PACKAGES += \
     handheld_core_hardware.prebuilt.xml
 
 # Boot control
+# Android 17 has no boringssl_self_test64 module. The stock vendor partition
+# carries that binary and its init service; do not request an AOSP copy here.
 PRODUCT_PACKAGES += \
-    boringssl_self_test64 \
     vndservicemanager
 
 # Camera
@@ -69,8 +70,9 @@ PRODUCT_PACKAGES += \
     android.hardware.drm-service.clearkey
 
 # Fingerprint / face
-PRODUCT_PACKAGES += \
-    android.hardware.biometrics.face-service.example
+# Android 17 ships the example face service only inside the virtual-face APEX
+# and marks it installable: false. The stock vendor partition retains the
+# device face binary; requesting the APEX-only module breaks Kati validation.
 
 # GNSS
 PRODUCT_PACKAGES += \
@@ -107,10 +109,10 @@ PRODUCT_PACKAGES += \
     android.hardware.telephony.ims.prebuilt.xml
 
 # USB
+# lsusb is provided by the toybox applet set, not as a standalone module.
 PRODUCT_PACKAGES += \
     android.hardware.usb.accessory.prebuilt.xml \
-    android.hardware.usb.host.prebuilt.xml \
-    lsusb
+    android.hardware.usb.host.prebuilt.xml
 
 # VINTF is always enforced on Android 16/17; keep the explicit declaration for
 # the Android 14/15 full-ROM trees.

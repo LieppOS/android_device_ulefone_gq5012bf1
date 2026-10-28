@@ -237,7 +237,7 @@
         <name>vendor.mediatek.hardware.videotelephony</name>
         <fqname>IVideoTelephony/default</fqname>
     </hal>
-    <sepolicy>
-        <version>34.0</version>
-    </sepolicy>
+    <!-- The preserved stock vendor partition keeps its own manifest and
+         sepolicy 34.0. This build-time device manifest must use the Android 17
+         platform version; assemble_vintf fills it from BOARD_SEPOLICY_VERS. -->
 </manifest>

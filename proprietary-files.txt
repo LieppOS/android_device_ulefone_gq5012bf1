@@ -1,6 +1,11 @@
 # GQ5012BF1 proprietary candidates — generated, requires review
 # Redistribution status is not implied by inclusion in this file.
 # Generated from stock VINTF/init/HAL/module/config evidence and ELF closure.
+# C53 stock-vendor staging: the entries marked EXTRACT_ONLY below overlap with
+# Android 17 source modules at the same vendor paths. They are still extracted
+# for audit, but the stock vendor partition remains the runtime payload. A
+# rebuilt vendor image must audit each replacement (especially RIL, protobuf,
+# tinycompress, and the removed libmnl symlink) before flashing.
 
 # product
 # partition properties
@@ -393,7 +398,7 @@ vendor/bin/hw/vendor.yft.hardware.tinylcd@1.0-service
 # hardware-facing ELF; stock init service vtservice_aidl
 vendor/bin/hw/vtservice_aidl
 # hardware-facing ELF; stock init service wpa_supplicant
-vendor/bin/hw/wpa_supplicant
+vendor/bin/hw/wpa_supplicant;EXTRACT_ONLY
 # stock init service insmod_sh
 vendor/bin/init.insmod.sh
 # stock init service insmod_pstore_blk
@@ -563,7 +568,7 @@ vendor/etc/init/eara-io-service.rc
 # init service definition
 vendor/etc/init/em_hal_user.rc
 # init service definition
-vendor/etc/init/face-default.rc
+vendor/etc/init/face-default.rc;EXTRACT_ONLY
 # init service definition
 vendor/etc/init/fingerprint-example.rc
 # init service definition
@@ -797,7 +802,7 @@ vendor/etc/permissions/android.hardware.telephony.gsm.xml
 # hardware configuration
 vendor/etc/permissions/android.hardware.telephony.ims.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
-vendor/etc/permissions/android.hardware.touchscreen.multitouch.distinct.prebuilt.xml
+vendor/etc/permissions/android.hardware.touchscreen.multitouch.distinct.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
 vendor/etc/permissions/android.hardware.touchscreen.multitouch.jazzhand.prebuilt.xml
 # hardware configuration
@@ -809,11 +814,11 @@ vendor/etc/permissions/android.hardware.usb.accessory.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
 vendor/etc/permissions/android.hardware.usb.host.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
-vendor/etc/permissions/android.hardware.vulkan.compute-0.prebuilt.xml
+vendor/etc/permissions/android.hardware.vulkan.compute-0.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
-vendor/etc/permissions/android.hardware.vulkan.level-1.prebuilt.xml
+vendor/etc/permissions/android.hardware.vulkan.level-1.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
-vendor/etc/permissions/android.hardware.vulkan.version-1_3.prebuilt.xml
+vendor/etc/permissions/android.hardware.vulkan.version-1_3.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
 vendor/etc/permissions/android.hardware.wifi.direct.prebuilt.xml;EXTRACT_ONLY
 # hardware configuration
@@ -913,9 +918,9 @@ vendor/etc/vintf/manifest/android.hardware.usb.gadget-aidl-service.mediatek.xml
 # VINTF manifest
 vendor/etc/vintf/manifest/android.hardware.wifi-service.xml;EXTRACT_ONLY
 # VINTF manifest
-vendor/etc/vintf/manifest/android.hardware.wifi.hostapd.xml
+vendor/etc/vintf/manifest/android.hardware.wifi.hostapd.xml;EXTRACT_ONLY
 # VINTF manifest
-vendor/etc/vintf/manifest/android.hardware.wifi.supplicant.xml
+vendor/etc/vintf/manifest/android.hardware.wifi.supplicant.xml;EXTRACT_ONLY
 # VINTF manifest
 vendor/etc/vintf/manifest/arm.mali.platform-mediatek.xml
 # VINTF manifest
@@ -923,7 +928,7 @@ vendor/etc/vintf/manifest/bluetooth_audio.xml;EXTRACT_ONLY
 # VINTF manifest
 vendor/etc/vintf/manifest/em_hal_service.xml
 # VINTF manifest
-vendor/etc/vintf/manifest/face-default.xml
+vendor/etc/vintf/manifest/face-default.xml;EXTRACT_ONLY
 # VINTF manifest; assembled from vintf/ via DEVICE_MANIFEST_FILE (AOSP defines a module of the same name)
 vendor/etc/vintf/manifest/fingerprint-example.xml;EXTRACT_ONLY
 # VINTF manifest; assembled from vintf/ via DEVICE_MANIFEST_FILE (AOSP defines a module of the same name)
@@ -1439,7 +1444,7 @@ vendor/lib64/libaal_sec.so
 # DT_NEEDED by vendor/lib64/lib_power_applist.so
 vendor/lib64/libaedv.so
 # DT_NEEDED by vendor/lib64/hw/audio.primary.mediatek.so
-vendor/lib64/libalsautils.so
+vendor/lib64/libalsautils.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libneuron_wrapper.so
 vendor/lib64/libapu_mdw.so
 # DT_NEEDED by vendor/lib64/libtranslator_utils.so
@@ -1609,7 +1614,7 @@ vendor/lib64/libicd_decoder.so
 # DT_NEEDED by vendor/bin/frs
 vendor/lib64/libifcutils_mtk.so
 # DT_NEEDED by vendor/lib64/libultrahdr_mtk.so
-vendor/lib64/libimage_io.so
+vendor/lib64/libimage_io.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libaiseg_sun.so
 vendor/lib64/libimagebuffer_wrapper.so
 # DT_NEEDED by vendor/lib64/liburee_meta_drmkeyinstall.so
@@ -1749,25 +1754,25 @@ vendor/lib64/libpqxmlflagparser.so
 # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.pq_aidl-impl.so
 vendor/lib64/libpqxmlparser.so
 # DT_NEEDED by vendor/lib64/mediacas/libclearkeycasplugin.so
-vendor/lib64/libprotobuf-cpp-full-21.7.so
+vendor/lib64/libprotobuf-cpp-full-21.7.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/mediacas/libclearkeycasplugin.so
-vendor/lib64/libprotobuf-cpp-lite-21.7.so
+vendor/lib64/libprotobuf-cpp-lite-21.7.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libkeymint.so
 vendor/lib64/libpuresoftkeymasterdevice.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libmtk-ril.so
 vendor/lib64/libratconfig.so
 # hardware-facing ELF
-vendor/lib64/libreference-ril.so
+vendor/lib64/libreference-ril.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libcameracustom.plugin.so
 vendor/lib64/libremosaic_wrapper.so
 # hardware-facing ELF
 vendor/lib64/librgbwlightsensor.so
 # hardware-facing ELF
-vendor/lib64/libril.so
+vendor/lib64/libril.so;EXTRACT_ONLY
 # hardware-facing ELF
 vendor/lib64/librilfusion.so
 # hardware-facing ELF
-vendor/lib64/librilutils.so
+vendor/lib64/librilutils.so;EXTRACT_ONLY
 # hardware-facing ELF
 vendor/lib64/libsensorndkbridge.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libaudio_aidl_conversion_common_ndk.so
@@ -1791,7 +1796,7 @@ vendor/lib64/libsysenv.so
 # DT_NEEDED by vendor/lib64/libkeymint_tool.so
 vendor/lib64/libteec.so
 # hardware-facing ELF
-vendor/lib64/libtinycompress.so
+vendor/lib64/libtinycompress.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/bin/dmc_core
 vendor/lib64/libtranslator_utils.so
 # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.nvram-impl.so
@@ -1813,7 +1818,7 @@ vendor/lib64/libwfov_mesh.so
 # DT_NEEDED by vendor/lib64/libmtkcam_thirdparty.customer.so
 vendor/lib64/libwfov_portrait.so
 # hardware-facing ELF
-vendor/lib64/libwifi-hal.so
+vendor/lib64/libwifi-hal.so;EXTRACT_ONLY
 # hardware-facing ELF
 vendor/lib64/libwifical.so
 # hardware-facing ELF
@@ -2187,7 +2192,7 @@ vendor/lib64/mt6878/libmml.so;SYMLINK=vendor/lib64/libmml.so
 # DT_NEEDED by vendor/bin/hw/vendor.mediatek.hardware.mmlpq@V1-service
 vendor/lib64/mt6878/libmmlpqImpl.so;SYMLINK=vendor/lib64/libmmlpqImpl.so
 # DT_NEEDED by vendor/bin/mnld
-vendor/lib64/mt6878/libmnl.so;SYMLINK=vendor/lib64/libmnl.so
+vendor/lib64/mt6878/libmnl.so;EXTRACT_ONLY
 # DT_NEEDED by vendor/lib64/libaudiodcrflt_vendor.so
 vendor/lib64/mt6878/libmtk_drvb.so;SYMLINK=vendor/lib64/libmtk_drvb.so
 # DT_NEEDED by vendor/lib64/hw/vendor.mediatek.hardware.camera.atms@1.0-impl.so
