@@ -339,6 +339,11 @@ vendor/bin/hw/android.hardware.thermal-service.mediatek
 vendor/bin/hw/android.hardware.usb-aidl-service.mediatekv1.0
 # hardware-facing ELF; stock init service vendor.usb_gadget_default
 vendor/bin/hw/android.hardware.usb.gadget-aidl-service.mediatekv1.0
+# C51 vibrator: the stock service is installed through the three entries for
+# this service (binary here, init rc and VINTF fragment further down). The new
+# source HAL is disabled. Do not enable it without marking all three entries
+# EXTRACT_ONLY, regenerating the vendor makefiles, and proving one
+# IVibrator/default + IVibratorManager/default implementation.
 # hardware-facing ELF; stock init service vendor.vibrator-default
 vendor/bin/hw/android.hardware.vibrator-service.mediatek
 # hardware-facing ELF; stock init service vendor.wifi_hal_legacy
