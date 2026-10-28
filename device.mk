@@ -17,13 +17,28 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 PRODUCT_SOONG_NAMESPACES += \
     $(DEVICE_PATH)
 
-# GQ5012BF1 is a Treble device. Keep this shared with recovery: it prevents the
-# recovery product from being treated as a legacy non-Treble target.
+# Android 14/15 recovery/full-ROM trees still need the explicit Treble override.
+# Android 17 makes Treble mandatory and rejects the obsolete variable.
+ifeq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_FULL_TREBLE_OVERRIDE := true
+endif
 
 # Recovery inherits only the shared board/storage contract above. Everything
 # below integrates the normal Android runtime and generated proprietary stack.
 ifeq ($(filter twrp_%,$(TARGET_PRODUCT)),)
+
+# Android 17 framework compatibility contract for the preserved stock V15
+# vendor payload. The stock vendor/odm manifests declare vendor HAL instances
+# that are not part of the AOSP Android 17 framework matrix; this file adds
+# exactly those required instances. Validated with checkvintf against the stock
+# vendor + odm metadata.
+DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += \
+    $(DEVICE_PATH)/vintf/framework_compatibility_matrix.xml
+
+# The preserved vendor payload is VNDK 34 / vendor API 202404. Android 17 no
+# longer has a current platform VNDK, but the v34 prebuilt snapshot is still
+# part of the platform; keep it so the stock ELF closure remains resolvable.
+PRODUCT_EXTRA_VNDK_VERSIONS := 34
 
 # API
 PRODUCT_PACKAGES += \
@@ -97,8 +112,11 @@ PRODUCT_PACKAGES += \
     android.hardware.usb.host.prebuilt.xml \
     lsusb
 
-# VINTF
+# VINTF is always enforced on Android 17; keep the explicit declaration for the
+# Android 14/15 full-ROM trees.
+ifeq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_ENFORCE_VINTF_MANIFEST := true
+endif
 
 # Wi-Fi
 PRODUCT_PACKAGES += \
