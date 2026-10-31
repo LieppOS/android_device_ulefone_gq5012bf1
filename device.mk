@@ -69,6 +69,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.drm-service.clearkey
 
+# Display refresh-rate controls in Settings
+PRODUCT_PACKAGES += \
+    SettingsOverlayGq5012bf1
+
 # Fingerprint / face
 # Android 17 ships the example face service only inside the virtual-face APEX
 # and marks it installable: false. The stock vendor partition retains the

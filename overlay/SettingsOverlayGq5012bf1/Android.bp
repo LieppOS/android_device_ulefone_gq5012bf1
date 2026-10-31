@@ -1,0 +1,8 @@
+//
+// Settings resource overlay for Ulefone GQ5012BF1.
+//
+
+runtime_resource_overlay {
+    name: "SettingsOverlayGq5012bf1",
+    product_specific: true,
+}
