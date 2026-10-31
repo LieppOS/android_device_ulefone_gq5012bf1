@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Extend the platform-owned hal_fingerprint_default domain; do not redeclare it.
+# Physical Microarray and libteec access observed in the OEM dependency/policy
+# contract. No alternate sensor, factory, admin/RPMB or protected-store access.
+not_recovery(`
+allow hal_fingerprint_default mafinger_device:chr_file { getattr open read write ioctl map };
+allow hal_fingerprint_default tkcore_client_device:chr_file { rw_file_perms map };
+allow hal_fingerprint_default self:capability2 wake_alarm;
+set_prop(hal_fingerprint_default, vendor_yft_fingerprint_prop)
+')

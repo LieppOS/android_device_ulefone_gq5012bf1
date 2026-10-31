@@ -1,1 +1,3 @@
 vendor_internal_prop(vendor_mtk_trustkernel_tee_prop)
+# Stock Microarray diagnostic properties, not activation switches.
+vendor_internal_prop(vendor_yft_fingerprint_prop)

@@ -73,7 +73,15 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     SettingsOverlayGq5012bf1
 
-# Fingerprint / face
+# Physical Microarray fingerprint HAL. The OEM adapter is selected by the
+# proprietary manifest; its /default extraction fixup and device VINTF must
+# remain aligned with this source-owned, TrustKernel-readiness-started rc.
+# proprietary-files.txt installs the matched helpers/V3 NDK chain in a private
+# directory selected only by this HAL's rc, avoiding AOSP .vendor collisions.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/etc/init/fingerprint-example.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/fingerprint-example.rc
+
+# Face
 # Android 17 ships the example face service only inside the virtual-face APEX
 # and marks it installable: false. The stock vendor partition retains the
 # device face binary; requesting the APEX-only module breaks Kati validation.

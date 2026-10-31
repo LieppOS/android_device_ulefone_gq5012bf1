@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# GQ5012BF1 Microarray physical HAL, adapted from the stock service credentials.
+# Registration is IFingerprint/default after the audited extract-files.py fixup.
+service vendor.fingerprint-example /vendor/bin/hw/android.hardware.biometrics.fingerprint-service.example
+    class hal
+    user system
+    group system input uhid
+    capabilities WAKE_ALARM
+    # Matched OEM C++ helpers/NDK wrappers; never shadow other HALs' libraries.
+    setenv LD_LIBRARY_PATH /vendor/lib64/fingerprint
+    disabled
+
+# Intentionally readiness-started, NOT lazy: an "interface aidl" declaration
+# would let ctl.interface_start bypass these TrustKernel preconditions.
+# The binary still publishes IFingerprint/default; clients wait for registration.
+# A disabled, non-oneshot service restarts normally after an unexpected exit.
+on property:vendor.trustkernel.ready=true && property:vendor.trustkernel.fs.state=ready
+    start vendor.fingerprint-example

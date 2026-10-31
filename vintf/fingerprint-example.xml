@@ -2,6 +2,8 @@
     <hal format="aidl">
         <name>android.hardware.biometrics.fingerprint</name>
         <version>3</version>
-        <fqname>IFingerprint/virtual</fqname>
+        <!-- Matches the hash-guarded OEM adapter fixup in extract-files.py.
+             Android 17 reserves /virtual for the IVirtualHal test controller. -->
+        <fqname>IFingerprint/default</fqname>
     </hal>
 </manifest>

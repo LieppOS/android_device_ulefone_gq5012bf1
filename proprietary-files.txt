@@ -571,8 +571,8 @@ vendor/etc/init/eara-io-service.rc
 vendor/etc/init/em_hal_user.rc
 # init service definition
 vendor/etc/init/face-default.rc;EXTRACT_ONLY
-# init service definition
-vendor/etc/init/fingerprint-example.rc
+# C59: source-owned rc installed by device.mk; retain stock copy for analysis only
+vendor/etc/init/fingerprint-example.rc;EXTRACT_ONLY
 # init service definition
 vendor/etc/init/fpsgo.rc
 # init service definition
@@ -1127,14 +1127,15 @@ vendor/lib64/android.hardware.audio@7.0.so;EXTRACT_ONLY
 vendor/lib64/android.hardware.audio@7.1-util.so;EXTRACT_ONLY
 # hardware-facing ELF
 vendor/lib64/android.hardware.audio@7.1.so;EXTRACT_ONLY
-# DT_NEEDED by vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so
-vendor/lib64/android.hardware.biometrics.common-V3-ndk.so;EXTRACT_ONLY
-# provided by an AOSP module
-vendor/lib64/android.hardware.biometrics.common.thread.so;EXTRACT_ONLY
-# provided by an AOSP module
-vendor/lib64/android.hardware.biometrics.common.util.so;EXTRACT_ONLY
-# hardware-facing ELF
-vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so;EXTRACT_ONLY
+# C59: preserve the OEM adapter's matched C++ helpers and V3 NDK ABI.
+# Copied ELFs have no Soong shared_libs installation edges. EXTRACT_ONLY left
+# these absent; current AOSP util instead links common-V4 and is not ABI proof.
+# Private destinations avoid collisions with the exported AOSP .vendor modules.
+# Only this HAL's source-owned rc selects this directory via LD_LIBRARY_PATH.
+vendor/lib64/android.hardware.biometrics.common-V3-ndk.so:vendor/lib64/fingerprint/android.hardware.biometrics.common-V3-ndk.so
+vendor/lib64/android.hardware.biometrics.common.thread.so:vendor/lib64/fingerprint/android.hardware.biometrics.common.thread.so
+vendor/lib64/android.hardware.biometrics.common.util.so:vendor/lib64/fingerprint/android.hardware.biometrics.common.util.so
+vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so:vendor/lib64/fingerprint/android.hardware.biometrics.fingerprint-V3-ndk.so
 # hardware-facing ELF
 vendor/lib64/android.hardware.bluetooth-V1-ndk.so;EXTRACT_ONLY
 # hardware-facing ELF
@@ -1193,8 +1194,8 @@ vendor/lib64/android.hardware.graphics.composer3-V2-ndk.so;EXTRACT_ONLY
 vendor/lib64/android.hardware.health-V1-ndk.so;EXTRACT_ONLY
 # hardware-facing ELF
 vendor/lib64/android.hardware.health-V2-ndk.so;EXTRACT_ONLY
-# DT_NEEDED by vendor/lib64/android.hardware.biometrics.fingerprint-V3-ndk.so
-vendor/lib64/android.hardware.keymaster-V4-ndk.so;EXTRACT_ONLY
+# C59: transitive DT_NEEDED of the preserved fingerprint V3 NDK library
+vendor/lib64/android.hardware.keymaster-V4-ndk.so:vendor/lib64/fingerprint/android.hardware.keymaster-V4-ndk.so
 # hardware-facing ELF
 vendor/lib64/android.hardware.light-V1-ndk.so;EXTRACT_ONLY
 # hardware-facing ELF
