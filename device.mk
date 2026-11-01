@@ -81,6 +81,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     SettingsOverlayGq5012bf1
 
+# Keep the full refresh range (up to 120 Hz) in battery saver. Needs
+# patches/frameworks_base/0001 (AOSP otherwise always caps rendering at 60 Hz).
+PRODUCT_SYSTEM_PROPERTIES += \
+    ro.lieppos.low_power_limits_refresh_rate=false
+
 # IMS: VoLTE / VoNR through the MediaTek in-modem IMS stack (see ims/README.md).
 PRODUCT_PACKAGES += \
     MtkImsServiceGq5012bf1 \

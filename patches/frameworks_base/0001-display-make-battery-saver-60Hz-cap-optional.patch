@@ -1,0 +1,14 @@
+--- a/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
++++ b/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
+@@ -1170,7 +1170,10 @@
+             mIsLowPower = Settings.Global.getInt(mContext.getContentResolver(),
+                     Settings.Global.LOW_POWER_MODE, 0 /*default*/) != 0;
+             final Vote vote;
+-            if (mIsLowPower) {
++            // LieppOS: devices may keep their full refresh range in battery saver
++            // (ro.lieppos.low_power_limits_refresh_rate=false). Default keeps AOSP's 60 Hz cap.
++            if (mIsLowPower && SystemProperties.getBoolean(
++                    "ro.lieppos.low_power_limits_refresh_rate", true)) {
+                 vote = Vote.forRenderFrameRates(0f, 60f);
+             } else {
+                 vote = null;
