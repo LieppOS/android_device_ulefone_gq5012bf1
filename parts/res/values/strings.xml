@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Armor lights</string>
+    <string name="tile_flashlight">Super flashlight</string>
+    <string name="tile_red">Red light</string>
+    <string name="tile_blue">Blue light</string>
+    <string name="state_off">Off</string>
+    <string name="state_low">Low</string>
+    <string name="state_max">Max</string>
+</resources>

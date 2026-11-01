@@ -1,0 +1,17 @@
+//
+// Armor lights: Quick Settings tiles for the GQ5012BF1 super flashlight
+// (LN2403 camping light: off/lowest/max) and the red and blue LEDs.
+//
+
+android_app {
+    name: "ArmorPartsGq5012bf1",
+    srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
+    manifest: "AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    system_ext_specific: true,
+    optimize: {
+        enabled: false,
+    },
+}

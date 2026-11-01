@@ -86,6 +86,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.lieppos.low_power_limits_refresh_rate=false
 
+# Quick Settings tiles: super flashlight (off/lowest/max), red light, blue light (parts/).
+# F1/F2 are deliberately left unbound (free for apps such as Key Mapper).
+PRODUCT_PACKAGES += \
+    ArmorPartsGq5012bf1
+
 # IMS: VoLTE / VoNR through the MediaTek in-modem IMS stack (see ims/README.md).
 PRODUCT_PACKAGES += \
     MtkImsServiceGq5012bf1 \

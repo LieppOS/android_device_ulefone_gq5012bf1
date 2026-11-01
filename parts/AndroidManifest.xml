@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick Settings tiles only. Shared uid system: runs as system_app, which the
+     stock vendor policy allows to write the yft_camplight (sysfs_yft_file) nodes.
+     persistent: a cached tile process gets frozen by the app freezer, which made
+     the first tap wait for a thaw and queued fast taps into multi-second bursts. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lieppos.armorparts"
+    android:sharedUserId="android.uid.system">
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@drawable/ic_biglight"
+        android:directBootAware="true"
+        android:persistent="true"
+        android:defaultToDeviceProtectedStorage="true">
+        <service
+            android:name=".FlashlightTile"
+            android:label="@string/tile_flashlight"
+            android:icon="@drawable/ic_biglight"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+        <service
+            android:name=".RedLightTile"
+            android:label="@string/tile_red"
+            android:icon="@drawable/ic_led"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+        <service
+            android:name=".BlueLightTile"
+            android:label="@string/tile_blue"
+            android:icon="@drawable/ic_led"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+    </application>
+</manifest>
