@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GQ5012BF1 (VTDR6115 AMOLED). Backlight 0..1 = DBV 0..4095 (mtk-leds 12-bit).
+     DBV 2047 = normal max, ~513 nits; DBV 4095 = HBM, ~926 nits (full white, stock
+     manual max / Sunshine mode, devicespecifications.com review). HBM is used only
+     for HDR content; sunlight HBM is disabled (minimumLux above sensor range).
+     Auto-brightness levels are the previous config scaled by 2047/4095 so the same
+     DBV is produced as with the stock 11-bit range. -->
+<displayConfiguration>
+    <screenBrightnessMap>
+        <point><value>0.0</value><nits>2.0</nits></point>
+        <point><value>0.499878</value><nits>513.0</nits></point>
+        <point><value>1.0</value><nits>926.0</nits></point>
+    </screenBrightnessMap>
+    <highBrightnessMode enabled="true">
+        <transitionPoint>0.499878</transitionPoint>
+        <minimumLux>100000</minimumLux>
+        <timing>
+            <timeWindowSecs>1800</timeWindowSecs>
+            <timeMaxSecs>300</timeMaxSecs>
+            <timeMinSecs>60</timeMinSecs>
+        </timing>
+        <allowInLowPowerMode>false</allowInLowPowerMode>
+        <minimumHdrPercentOfScreen>0.5</minimumHdrPercentOfScreen>
+        <sdrHdrRatioMap>
+            <point><sdrNits>2.000</sdrNits><hdrRatio>4.000</hdrRatio></point>
+            <point><sdrNits>231.500</sdrNits><hdrRatio>4.000</hdrRatio></point>
+            <point><sdrNits>300.000</sdrNits><hdrRatio>3.087</hdrRatio></point>
+            <point><sdrNits>400.000</sdrNits><hdrRatio>2.315</hdrRatio></point>
+            <point><sdrNits>513.000</sdrNits><hdrRatio>1.805</hdrRatio></point>
+        </sdrHdrRatioMap>
+    </highBrightnessMode>
+    <autoBrightness>
+        <luxToBrightnessMapping>
+            <map>
+                <point><first>0</first><second>0.000000</second></point>
+                <point><first>32</first><second>0.013776</second></point>
+                <point><first>128</first><second>0.123985</second></point>
+                <point><first>256</first><second>0.190898</second></point>
+                <point><first>384</first><second>0.202706</second></point>
+                <point><first>512</first><second>0.214515</second></point>
+                <point><first>640</first><second>0.226323</second></point>
+                <point><first>768</first><second>0.238131</second></point>
+                <point><first>896</first><second>0.249939</second></point>
+                <point><first>1024</first><second>0.261747</second></point>
+                <point><first>2048</first><second>0.356212</second></point>
+                <point><first>4096</first><second>0.499878</second></point>
+                <point><first>6144</first><second>0.499878</second></point>
+                <point><first>8192</first><second>0.499878</second></point>
+                <point><first>10240</first><second>0.499878</second></point>
+                <point><first>12288</first><second>0.499878</second></point>
+                <point><first>14336</first><second>0.499878</second></point>
+                <point><first>16384</first><second>0.499878</second></point>
+                <point><first>18432</first><second>0.499878</second></point>
+            </map>
+        </luxToBrightnessMapping>
+    </autoBrightness>
+</displayConfiguration>

@@ -89,6 +89,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/init/fingerprint-example.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/fingerprint-example.rc
 
+# Display: 12-bit backlight (DBV 0..4095, see prebuilt/dtbs) with HBM used only
+# for HDR content. Product takes precedence over the stock vendor display config.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/etc/displayconfig/display_id_4627039422300187648.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/displayconfig/display_id_4627039422300187648.xml
+
 # Face
 # Android 17 ships the example face service only inside the virtual-face APEX
 # and marks it installable: false. The stock vendor partition retains the
