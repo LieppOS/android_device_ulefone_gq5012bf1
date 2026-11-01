@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<!-- gq5012bf1: applied after carrier files. VoLTE availability is still
+     subject to the network actually registering IMS. VoNR is offered only
+     where it was requested and tested (Lithuania: Telia LT carrier id 892, Bite carrier id 893). -->
+<carrier_config_list>
+    <carrier_config>
+        <boolean name="carrier_volte_available_bool" value="true" />
+        <boolean name="editable_enhanced_4g_lte_bool" value="true" />
+        <boolean name="hide_enhanced_4g_lte_bool" value="false" />
+    </carrier_config>
+    <carrier_config cid="892" name="Telia LT">
+        <boolean name="vonr_enabled_bool" value="true" />
+        <boolean name="vonr_setting_visibility_bool" value="true" />
+    </carrier_config>
+    <carrier_config cid="893" name="Bite LT">
+        <boolean name="vonr_enabled_bool" value="true" />
+        <boolean name="vonr_setting_visibility_bool" value="true" />
+    </carrier_config>
+</carrier_config_list>

@@ -4,3 +4,12 @@
 # HIDL mapper@4.0. Labelling the name only lets that lookup succeed instead of
 # producing an SELinux denial in every graphics client; behaviour is unchanged.
 mapper/mediatek    u:object_r:hal_graphics_mapper_service:s0
+
+# MediaTek ImsService binder services (com.mediatek.ims runs as radio). Labels are
+# identical to the stock system_ext; without "mwis"/"wfo" the service crashes on
+# start (SELinux denied addService).
+imsa          u:object_r:radio_service:s0
+mtkIms        u:object_r:radio_service:s0
+GbaService    u:object_r:radio_service:s0
+mwis          u:object_r:radio_service:s0
+wfo           u:object_r:radio_service:s0

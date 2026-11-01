@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- gq5012bf1: device supports VoLTE via the MediaTek in-modem IMS stack. -->
+<resources>
+    <bool name="config_device_volte_available">true</bool>
+</resources>

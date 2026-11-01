@@ -81,6 +81,19 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     SettingsOverlayGq5012bf1
 
+# IMS: VoLTE / VoNR through the MediaTek in-modem IMS stack (see ims/README.md).
+PRODUCT_PACKAGES += \
+    MtkImsServiceGq5012bf1 \
+    ImsFrameworkOverlayGq5012bf1 \
+    ImsPhoneOverlayGq5012bf1 \
+    ImsCarrierConfigOverlayGq5012bf1
+
+# The MediaTek RIL's "dynamic IMS switch" expects per-carrier capability reports
+# from the stock MediaTek IMS framework; with the AOSP-side ImsService it forces
+# VoNR off. Disabled so Android's per-SIM VoLTE/VoNR switches drive the modem.
+PRODUCT_PRODUCT_PROPERTIES += \
+    persist.vendor.mtk_dynamic_ims_switch=0
+
 # Physical Microarray fingerprint HAL. The OEM adapter is selected by the
 # proprietary manifest; its /default extraction fixup and device VINTF must
 # remain aligned with this source-owned, TrustKernel-readiness-started rc.

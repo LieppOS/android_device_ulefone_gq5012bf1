@@ -1,0 +1,52 @@
+//
+// IMS (VoLTE / VoNR) for Ulefone GQ5012BF1.
+//
+// The stock MediaTek ImsService (com.mediatek.ims, Android 15) needs the
+// mediatek-* boot jars, which this AOSP system does not ship. Instead this uses
+// the community "unified" MediaTek ImsService (xiaomi-mediatek-devs/
+// android_vendor_mediatek_ims, versionCode 33), which only needs AOSP telephony,
+// plus a classes2.dex holding a no-op TelephonyMetrics (removed in Android 17).
+// See README.md for provenance and how prebuilt/ImsService.apk is reproduced.
+//
+
+android_app_import {
+    name: "MtkImsServiceGq5012bf1",
+    apk: "prebuilt/ImsService.apk",
+    presigned: true,
+    privileged: true,
+    system_ext_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    // Same package (com.mediatek.ims) as the stock blob listed by the vendor makefile.
+    overrides: ["ImsService"],
+    required: ["privapp-permissions-com.mediatek.ims.xml"],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-com.mediatek.ims.xml",
+    src: "permissions/privapp-permissions-com.mediatek.ims.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+runtime_resource_overlay {
+    name: "ImsFrameworkOverlayGq5012bf1",
+    resource_dirs: ["overlays/framework/res"],
+    manifest: "overlays/framework/AndroidManifest.xml",
+    product_specific: true,
+}
+
+runtime_resource_overlay {
+    name: "ImsPhoneOverlayGq5012bf1",
+    resource_dirs: ["overlays/phone/res"],
+    manifest: "overlays/phone/AndroidManifest.xml",
+    product_specific: true,
+}
+
+runtime_resource_overlay {
+    name: "ImsCarrierConfigOverlayGq5012bf1",
+    resource_dirs: ["overlays/carrierconfig/res"],
+    manifest: "overlays/carrierconfig/AndroidManifest.xml",
+    product_specific: true,
+}

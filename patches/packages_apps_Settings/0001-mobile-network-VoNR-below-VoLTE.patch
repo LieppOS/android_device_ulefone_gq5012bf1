@@ -1,0 +1,29 @@
+--- a/res/xml/mobile_network_settings.xml
++++ b/res/xml/mobile_network_settings.xml
+@@ -147,6 +147,14 @@
+             settings:keywords="@string/keywords_enhance_4g_lte"
+             settings:controller="com.android.settings.network.telephony.Enhanced4gLtePreferenceController"/>
+ 
++        <!-- gq5012bf1: VoNR (5G calling) directly below VoLTE. Settings search is handled by
++             NrAdvancedCallingSearchItem. -->
++        <com.android.settings.spa.preference.ComposePreference
++            android:key="nr_advanced_calling"
++            android:order="155"
++            settings:searchable="false"
++            settings:controller="com.android.settings.network.telephony.NrAdvancedCallingPreferenceController"/>
++
+         <SwitchPreferenceCompat
+             android:key="4g_calling"
+             android:order="160"
+@@ -345,11 +353,6 @@
+               settings:controller=
+                   "com.android.settings.network.telephony.NullAlgorithmsPreferenceController"/>
+ 
+-          <!-- Settings search is handled by NrAdvancedCallingSearchItem. -->
+-          <com.android.settings.spa.preference.ComposePreference
+-              android:key="nr_advanced_calling"
+-              settings:searchable="false"
+-              settings:controller="com.android.settings.network.telephony.NrAdvancedCallingPreferenceController"/>
+         </com.android.settingslib.widget.UntitledPreferenceCategory>
+     </com.android.settingslib.widget.UntitledPreferenceCategory>
+ 
