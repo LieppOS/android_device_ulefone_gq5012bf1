@@ -5,6 +5,11 @@
 
 DEVICE_PATH := device/ulefone/gq5012bf1
 
+# The retained vendor selects ro.zygote=zygote64. Inherit this BEFORE the
+# standard phone chain reaches core_minimal.mk, otherwise only the 32-bit
+# zygote rc is installed even though the board/app_process are ARM64.
+$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit_only.mk)
+
 # Inherit from the standard phone product definitions. Most specific first.
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 

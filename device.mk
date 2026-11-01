@@ -61,6 +61,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     vndservicemanager
 
+# The retained stock vendor still uses HIDL. Android 17's minimal product
+# does not install these legacy runtime services implicitly; without them
+# vendor HAL registration/allocation cannot reproduce the working slot B.
+PRODUCT_PACKAGES += \
+    hwservicemanager \
+    android.hidl.allocator@1.0-service \
+    android.hidl.memory@1.0-impl
+
 # Camera
 PRODUCT_PACKAGES += \
     android.hardware.camera.concurrent.prebuilt.xml
@@ -90,9 +98,15 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     android.hardware.location.gps.prebuilt.xml
 
-# Health
-PRODUCT_PACKAGES += \
-    android.hardware.health-service.example
+# The vendor-preserving system update retains the SDK-34 health daemon/rc,
+# which has no charger-mode registration. A newly built Android-17 example
+# health service integrates charger mode and overrides the standalone charger;
+# selecting it without deploying that vendor image would remove charging UI.
+ifeq ($(LIEPPOS_PRESERVE_INSTALLED_VENDOR),true)
+PRODUCT_PACKAGES += charger
+else
+PRODUCT_PACKAGES += android.hardware.health-service.example
+endif
 
 # IR
 PRODUCT_PACKAGES += \

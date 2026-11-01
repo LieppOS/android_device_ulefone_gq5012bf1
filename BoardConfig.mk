@@ -177,6 +177,10 @@ TARGET_SCREEN_HEIGHT := 2400
 # Device-specific vendor SELinux policy
 BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
+# Platform-side labels that must ship with system_ext (the deployed vendor is a
+# curated stock image, so vendor policy changes do not reach the device).
+SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/system_ext/private
+
 # -------------------------------------------------
 # Full-ROM partitions and AVB
 # -------------------------------------------------
@@ -231,6 +235,12 @@ BOARD_BUILD_SUPER_IMAGE_BY_DEFAULT := true
 # Release builds must provide intentional project keys; never copy or fabricate
 # Ulefone private signing material.
 BOARD_AVB_ENABLE := true
+# Match the verified deployment's dm-verity hash contract instead of
+# avbtool's SHA-1 default. Deployment packaging still validates the live
+# parent split, signing keys, rollback values and filesystem payloads.
+BOARD_AVB_SYSTEM_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_SYSTEM_EXT_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_PRODUCT_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
 BOARD_AVB_VBMETA_SYSTEM := system
 BOARD_AVB_VBMETA_VENDOR := vendor
 BOARD_AVB_VBMETA_SYSTEM_ROLLBACK_INDEX_LOCATION := 2

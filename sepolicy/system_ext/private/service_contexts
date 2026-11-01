@@ -1,0 +1,6 @@
+# libui Gralloc5 asks servicemanager whether the stable-C mapper named by the
+# allocator's suffix ("mediatek") is declared. The stock MediaTek vendor does
+# not declare it in VINTF, so the answer is "not declared" and libui keeps using
+# HIDL mapper@4.0. Labelling the name only lets that lookup succeed instead of
+# producing an SELinux denial in every graphics client; behaviour is unchanged.
+mapper/mediatek    u:object_r:hal_graphics_mapper_service:s0
