@@ -45,7 +45,7 @@ def generate(source):
     const bool labOptIn = android::base::GetBoolProperty(
         "nfc.lieppos.st21_t4t_compat", false);
     std::string stConfig;
-    if (!aidlConfigValue.t4tNfceeEnable && labOptIn && labBoard == "gq5012bf1") {
+    if (!aidlConfigValue.t4tNfceeEnable && labOptIn && lieppos::nfc_lab::IsLabBoard(labBoard)) {
       if (!android::base::ReadFileToString("/vendor/etc/libnfc-hal-st.conf", &stConfig)) {
         stConfig.clear();  // Fail closed; no policy relaxation or file write.
       }

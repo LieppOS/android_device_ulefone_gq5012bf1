@@ -13,6 +13,11 @@ int main() {
   assert(!EffectiveT4t(false, "other", true, cfg));
   assert(EffectiveT4t(false, "gq5012bf1", true, cfg));
   assert(EffectiveT4t(true, "other", false, ""));
+  // Stock vendor property is upper case on the real device (hardware-verified).
+  assert(EffectiveT4t(false, "GQ5012BF1", true, cfg));
+  assert(!EffectiveT4t(false, "GQ5012BF1", false, cfg));
+  assert(IsLabBoard("gq5012bf1") && IsLabBoard("GQ5012BF1") && IsLabBoard("Gq5012Bf1"));
+  assert(!IsLabBoard("") && !IsLabBoard("gq5012bf") && !IsLabBoard("gq5012bf1x") && !IsLabBoard("gq5012bf2"));
   assert(!StConfigEnablesNdef("NDEF_NFCEE_ENABLE=1\n"));
   assert(!StConfigEnablesNdef(cfg + "NDEF_NFCEE_ENABLE=0\n"));
   assert(!StConfigEnablesNdef(cfg + "NCI_HAL_MODULE=\"other\"\n"));

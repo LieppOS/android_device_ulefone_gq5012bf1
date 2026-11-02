@@ -744,7 +744,7 @@ diff --git a/libnfc-nci/src/adaptation/NfcAdaptation.cc b/libnfc-nci/src/adaptat
 +    const bool labOptIn = android::base::GetBoolProperty(
 +        "nfc.lieppos.st21_t4t_compat", false);
 +    std::string stConfig;
-+    if (!aidlConfigValue.t4tNfceeEnable && labOptIn && labBoard == "gq5012bf1") {
++    if (!aidlConfigValue.t4tNfceeEnable && labOptIn && lieppos::nfc_lab::IsLabBoard(labBoard)) {
 +      if (!android::base::ReadFileToString("/vendor/etc/libnfc-hal-st.conf", &stConfig)) {
 +        stConfig.clear();  // Fail closed; no policy relaxation or file write.
 +      }
@@ -760,7 +760,7 @@ diff --git a/libnfc-nci/src/include/LiepposNfcLab.h b/libnfc-nci/src/include/Lie
 new file mode 100644
 --- /dev/null
 +++ b/libnfc-nci/src/include/LiepposNfcLab.h
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,118 @@
 +// SPDX-License-Identifier: Apache-2.0
 +#ifndef LIEPPOS_NFC_LAB_H
 +#define LIEPPOS_NFC_LAB_H
@@ -860,8 +860,22 @@ new file mode 100644
 +  }
 +  return enable == 1 && module && firmware;
 +}
++// The stock Ulefone vendor partition reports ro.product.vendor.device=GQ5012BF1
++// (upper case) while system/product report gq5012bf1. Hardware testing on
++// 2026-11-02 showed an exact lower-case match can never enable the opt-in path,
++// so compare ASCII case-insensitively and require the exact length.
++inline bool IsLabBoard(const std::string& board) {
++  static constexpr char kBoard[] = "gq5012bf1";
++  if (board.size() != sizeof(kBoard) - 1) return false;
++  for (size_t i = 0; i < board.size(); i++) {
++    char c = board[i];
++    if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
++    if (c != kBoard[i]) return false;
++  }
++  return true;
++}
 +inline bool EffectiveT4t(bool halAdvertised, const std::string& board, bool labOptIn, const std::string& config) {
-+  return halAdvertised || (board == "gq5012bf1" && labOptIn && StConfigEnablesNdef(config));
++  return halAdvertised || (IsLabBoard(board) && labOptIn && StConfigEnablesNdef(config));
 +}
 +}  // namespace lieppos::nfc_lab
 +#endif
