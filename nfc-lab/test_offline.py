@@ -41,8 +41,32 @@ def main():
     else:
         print('SKIP file-context compiler unavailable')
     if args.policy:
-        checkfc = source.parents[2] / 'out/host/linux-x86/bin/checkfc'
-        run("Check context type against existing reference policy (not a rebuild)", [checkfc, args.policy, contexts])
+        checkfc = next((p for p in [source.parents[2] / 'out-nfc-lab/host/linux-x86/bin/checkfc', source.parents[2] / 'out/host/linux-x86/bin/checkfc'] if p.is_file()), None)
+        if checkfc:
+            run("Check context type against the built policy", [checkfc, args.policy, contexts])
+        else:
+            print('SKIP checkfc unavailable')
+        # The existing NFC stack must remain the only owner of the controller node.
+        if shutil.which('sesearch'):
+            rules = subprocess.run(['sesearch', '--allow', '-t', 'nfc_device', '-c', 'chr_file', str(args.policy)], text=True, capture_output=True, check=True).stdout
+            # Only rules that actually permit talking to the node count. Labelling
+            # permissions such as getattr/setattr granted through the dev_type
+            # attribute are not controller access.
+            access = {'open', 'read', 'write', 'ioctl', 'map', 'append'}
+            users = set()
+            for line in rules.splitlines():
+                if not line.startswith('allow '):
+                    continue
+                parts = line.split()
+                granted = set(re.findall(r'[a-z_]+', line.split(':', 1)[1].split(None, 1)[1]))
+                if granted & access:
+                    users.add(parts[1])
+            assert 'hal_nfc_default' in users, 'The NFC HAL must retain controller access'
+            forbidden = users - {'hal_nfc_default'}
+            assert not forbidden, 'Only the NFC HAL may use the controller node; also allowed: ' + str(forbidden)
+            print('PASS controller node ownership: only hal_nfc_default may open/read/write /dev/st21nfc')
+        else:
+            print('SKIP sesearch unavailable; controller-ownership rule check not run')
     resource = ET.parse(ROOT / 'overlay/NfcNci/res/values/lieppos_nfc_lab.xml')
     assert resource.find('bool').text == 'false', 'Operational backend must remain build-disabled'
     fixture = out / 'profile-test.mk'
