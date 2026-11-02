@@ -2,7 +2,7 @@
 
 ## Scope and status
 
-**PARTIAL platform integration, disabled by default.** The new owner-service Java sources and Binder contracts compile against Android37 SDK; native cache/compatibility helpers pass host sanitizer tests; exact JNI getter typechecks; the generated patch passes `git apply --check` against the actual source revision. This is **not** a full NFC APEX, Soong product, SELinux-policy rebuild, installation or RF test.
+**PARTIAL runtime integration, disabled by default; full NFC APEX/app host build now verified.** Following scoped owner approval, the patched NFC APEX and app completed a real Android17/arm64 Soong build (25202 actions, exit0), followed by rebuilt SELinux policy/context checks. Artifact signatures and payload AVB integrity verify offline. This is **not** a complete ROM/VINTF qualification, installation, runtime permission/lifecycle test or RF test. Initial SDK/helper checks below remain narrower evidence, not substitutes for this full build.
 
 No production NFC configuration, firmware, routing, controller state, live labels or enforcement was changed. The only fresh phone inspection was read-only storage-label metadata, described below.
 
@@ -16,7 +16,7 @@ Located read-only reference projects in the existing Lineage24 tree:
 | hardware/st/nfc | `7cf8d50bd425329cff555fe94dd64b20c89ad18a` |
 | hardware/interfaces | `1b92b77fe1f2f2c820c51b0b1e366c17d6b9911b` |
 
-These supersede blindly using the older upstream research revisions as a patch base. They do not independently prove binary identity with the installed APEX. The canonical framework source checkouts are absent. The root-owned Lineage reference remains unmodified; patches belong to this device repository's existing patch mechanism, not an arbitrary new Android clone.
+These supersede blindly using the older upstream research revisions as a patch base. They do not independently prove binary identity with the installed APEX. The canonical framework source checkouts are absent. The initial delivery left the Lineage reference unmodified. The owner subsequently authorized scoped NFC/app/device writes and the full APEX build there; source files are now user-writable, while some Git metadata remains root-owned. This task made no permission/remote changes. The exact pinned patch is applied in that existing tree; its HEAD pin is unchanged. Patches still belong to this device repository's existing mechanism, not another Android clone.
 
 `overlay/` is the authoritative source for **new** patch files. `prepare_patch.py` combines those files with narrowly anchored edits to this exact reference revision and reproducibly generates:
 
@@ -54,7 +54,7 @@ A HAL already advertising true is preserved. Missing/denied/oversized/ambiguous 
 - Mapping2.0 CC/file/access/capacity checks, maximum8190-byte NDEF message, Android NDEF validation and write readback.
 - A shared manager monitor spans the lab transaction. Existing read/write/clear native Java entrypoints become synchronized on that same manager to prevent primitive interleaving with normal Type4 clients.
 - Uses existing NativeT4tNfcee setup/cleanup, not a second transport. Native setup/cleanup can temporarily change discovery. This is why **even a read is an approved operational device test**, not passive diagnostics.
-- Errors fail-stop without automatic retries or recovery. Cleanup returning is not proof that normal RF behavior was restored. Binder death/expiry/token handling is explicit; no global route-restoration claim is made without device validation.
+- The lab controller fails-stop and adds no automatic retry/recovery. Existing native framework watchdogs still apply (see the audit below). Cleanup returning is not proof that normal RF behavior was restored. Binder death/expiry/token handling is explicit; no global route-restoration claim is made without device validation.
 
 The app has a real separate client and read/write controls. Debug signing does not grant either signature permission. Source/build gates remain off; no live enablement or controller-memory operation was run.
 
@@ -72,7 +72,7 @@ Source fix:
 - Opt-in `init.lieppos-nfc-lab.rc`: correct owner/mode plus restorecon of that directory at post-fs-data.
 - No new allow rule, direct-controller permission, permissive domain or live relabel.
 
-The regex compiled with `sefcontext_compile`; `checkfc` accepted its type against an existing host reference policy. That is not a complete policy rebuild. `/data` labels are shared across slots: deployment/relabeling and Slot A compatibility require explicit approval and tests before booting such a build.
+Initially the regex compiled with `sefcontext_compile` and `checkfc` accepted its type against an existing reference policy. The authorized follow-up rebuilt the actual product policy and passed `system_ext_file_contexts_test`, `sepolicy_neverallows` and `sepolicy_test`; the merged system_ext contexts contain the narrow NFC mapping. See the warnings and limits below. `/data` labels are shared across slots: deployment/relabeling and Slot A compatibility require explicit approval and tests before booting such a build.
 
 ## Offline reproduction
 
@@ -88,11 +88,43 @@ Optionally supply `--policy /path/to/existing/precompiled_sepolicy` for `checkfc
 
 Recorded checks: patch reproducibility/application, native ASan/UBSan parser/gating tests with20000 malformed frames and concurrent snapshots; both Binder contracts/new owner services API-compilation;21 Type4 policy/ownership/CC/bounds/read-only/fail-stop simulation checks; exact JNI getter compilation; default-off product profile/API-version rejection; narrow context compilation/reference-policy type validation. Mock port tests are explicitly not hardware verification.
 
+## Authorized full-platform build follow-up
+
+The same existing Lineage24 tree was authorized for scoped integration; no extra Git repository/worktree or Android tree was created. The reviewed app commit `61afd2a601173568d91b3faf0fddfd9fa0e7a121` was exported (Android.bp/LICENSE/PROVENANCE/src only) to `packages/apps/LieppOSNfcLab` with source-export metadata. This is a build-only projection, not a new canonical source owner or a completed manifest migration.
+
+A real graph failure exposed missing standard `lineageVarsPlugin` exports. Full-ROM `BoardConfig.mk` now conditionally includes the existing upstream `vendor/lineage/config/BoardConfigSoong.mk`. It exports existing values; it does not inherit kernel-rebuild defaults, add headers, change the prebuilt kernel or alter the separate recovery branch.
+
+Successful build settings, from the authorized Lineage source root:
+
+```sh
+OUT_DIR=out-nfc-lab TARGET_PRODUCT=lineage_gq5012bf1 TARGET_RELEASE=cp2a \
+TARGET_BUILD_VARIANT=userdebug LIEPPOS_NFC_LAB=true SOONG_NINJA=ninja \
+ALLOW_BP_UNDER_SYMLINKS=false build/soong/soong_ui.bash --make-mode -j12 \
+    com.android.nfcservices LieppOSNfcLab
+```
+
+`out-nfc-lab` is a new output-only symlink to canonical `build/nfc-lab/full-apex`; existing Lineage outputs are preserved. The relative spelling avoids an unrelated absolute-OUT_DIR path-validation error. Supported Ninja was selected after Siso could not load its generated main.star; no dependency, sandbox, API, SELinux, AVB or path check was disabled. All failure/retry logs are preserved.
+
+Actual follow-up results:
+
+- Complete JNI/native adaptation, owner AIDL/Java/resources/R8, APEX/CAPEX and app build: **PASS**,25202 actions.
+- APEX/CAPEX/owner/app signatures: **PASS**; app and inner NFC-owner APK certificates match. **Local AOSP test keys**, not production/retail signing authorization.
+- Payload AVB signature/hashtree: **PASS**; embedded public key matches the declared source public key.
+- Actual AArch64 JNI: metadata getter present and one linked shared cache; libnfc-nci remains statically linked.
+- Compiled manifest: distinct signature permissions; host CE components disabled; operational service resolves to `lieppos_nfc_lab_type4_enabled=false`.
+- Rebuilt product `sepolicy_test`, `system_ext_file_contexts_test`, `sepolicy_neverallows`: **exit0**,43 actions. The upstream test emitted125 `isolated_compute_allowed_property_type does not exist` diagnostics, and checkpolicy emitted a no-permission-set warning. These are disclosed, not hidden or fixed outside NFC scope; passing tests do not establish complete security coverage.
+- Upstream API documentation/link warnings and the current DEX tool's API37 warning are retained in logs; no target API downgrade or warning suppression was used.
+- `check-vintf-all` expanded into80689 whole-platform actions. Only that oversized attempt was intentionally stopped; **complete VINTF/ROM validation remains pending**, not passed or proven incompatible.
+
+Outputs and logs are under canonical `build/nfc-lab/`. `full-apex-inputs.json` records1238 platform project SHAs and reviewed app export/board hashes; it does not claim every other platform working tree was clean or a hermetic build. `full-apex-artifact-verification.json` records exact artifact paths/hashes/signature checks. Nothing was installed or pushed.
+
+Native audit found a real enablement blocker in the unchanged upstream Type4 path: `setup()`/`cleanup()` can restart discovery without preserving its initial stopped state, and cleanup close failures are logged without being reflected in an otherwise successful data result. Existing `NativeNfcManager::startRfDiscovery()` can also invoke normal NFCC-timeout recovery. The **new layer** adds no automatic retry/recovery, but it cannot promise that the **existing stack** never recovers. Keep the operational resource/configuration gates off until narrowly tested native hardening and explicit runtime/RF approval.
+
 ## Remaining engineering
 
-1. Obtain the normal writable full Android source/build ownership and synchronize the app/framework projects through the canonical manifest process.
-2. Apply/review the patch there, build the complete NFC APEX and product, run real framework Binder/lifecycle/native integration tests, and validate full VINTF/SELinux/product integration.
-3. Audit existing native Type4 cleanup on all error paths before enabling its lab resource. The new layer refuses retries; it does not magically fix native restoration.
+1. Make the reviewed app/patch synchronization reproducible through the canonical manifest/ownership workflow before long-term deployment; the authorized build-only export is not that migration.
+2. Run actual framework Binder/lifecycle/native integration tests and complete VINTF/product qualification; offline build/signature/policy success does not establish runtime behavior.
+3. Harden/test the native Type4 discovery/close-error paths before enabling its lab resource. The new layer refuses retries; it does not magically fix native restoration.
 4. Review the kernel exclusive-open race and recovery error paths with ABI/KMI/module builds before any source change; none was made just to claim kernel work.
 5. Only after separate approval, perform owned-reader NFCEE RF/read/write/persistence and normal-reader/HCE regression tests. No automatic approval is implied.
 6. Generic exclusive RF/Type2/UID/SAK/P2P/low-power controls, full routing/SE/IRQ diagnostics and external instrument transports remain unimplemented/unverified; the app catalogue lists all59 original features explicitly.
