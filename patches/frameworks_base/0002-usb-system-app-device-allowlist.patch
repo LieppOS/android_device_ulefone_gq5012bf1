@@ -1,0 +1,72 @@
+--- a/services/usb/java/com/android/server/usb/UsbUserPermissionManager.java
++++ b/services/usb/java/com/android/server/usb/UsbUserPermissionManager.java
+@@ -35,6 +35,7 @@ import android.hardware.usb.UsbDevice;
+ import android.hardware.usb.UsbManager;
+ import android.os.AsyncTask;
+ import android.os.Binder;
++import android.os.SystemProperties;
+ import android.os.Environment;
+ import android.os.Process;
+ import android.os.UserHandle;
+@@ -467,6 +468,11 @@ class UsbUserPermissionManager {
+             return false;
+         }
+ 
++        // LieppOS: after the camera/microphone privacy and CAMERA permission checks above.
++        if (isAllowlistedSystemApp(device, packageName, uid)) {
++            return true;
++        }
++
+         if (android.hardware.usb.flags.Flags.enablePersistentUsbDevicePermissions()) {
+             return hasPermissionInternal(device, fingerprint, packageName, uid);
+         } else {
+@@ -483,6 +489,49 @@ class UsbUserPermissionManager {
+         }
+     }
+ 
++    /**
++     * LieppOS: system apps that may open one specific built-in USB device without the
++     * per-connection permission dialog (e.g. ThermoVue and the internal thermal camera,
++     * which re-enumerates every time the app powers it). Device-tree property:
++     * ro.lieppos.usb_device_allowlist = "package:vid:pid[,package:vid:pid...]" (hex ids).
++     * Only apps installed on a system partition, with the exact uid, are accepted.
++     */
++    private boolean isAllowlistedSystemApp(UsbDevice device, String packageName, int uid) {
++        String list = SystemProperties.get("ro.lieppos.usb_device_allowlist", "");
++        if (list.isEmpty() || packageName == null) {
++            return false;
++        }
++        boolean match = false;
++        for (String entry : list.split(",")) {
++            String[] f = entry.trim().split(":");
++            if (f.length != 3 || !f[0].equals(packageName)) {
++                continue;
++            }
++            try {
++                if (Integer.parseInt(f[1], 16) == device.getVendorId()
++                        && Integer.parseInt(f[2], 16) == device.getProductId()) {
++                    match = true;
++                    break;
++                }
++            } catch (NumberFormatException e) {
++                Slog.w(TAG, "bad ro.lieppos.usb_device_allowlist entry: " + entry);
++            }
++        }
++        if (!match) {
++            return false;
++        }
++        final long token = Binder.clearCallingIdentity();
++        try {
++            ApplicationInfo ai = mContext.getPackageManager().getApplicationInfoAsUser(
++                    packageName, 0, UserHandle.getUserId(uid));
++            return ai.uid == uid && ai.isSystemApp();
++        } catch (PackageManager.NameNotFoundException e) {
++            return false;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++
+     @VisibleForTesting
+     boolean hasPermissionInternal(UsbAccessory accessory, String packageName, int pid, int uid) {
+         synchronized (mLock) {

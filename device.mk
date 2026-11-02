@@ -86,10 +86,20 @@ PRODUCT_PACKAGES += \
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.lieppos.low_power_limits_refresh_rate=false
 
+# ThermoVue may open the built-in thermal camera (InfiRay 3474:4321) without the
+# per-connection USB dialog (patches/frameworks_base/0002).
+PRODUCT_SYSTEM_PROPERTIES += \
+    ro.lieppos.usb_device_allowlist=com.energy.tc2c:3474:4321
+
 # Quick Settings tiles: super flashlight (off/lowest/max), red light, blue light (parts/).
 # F1/F2 are deliberately left unbound (free for apps such as Key Mapper).
 PRODUCT_PACKAGES += \
     ArmorPartsGq5012bf1
+
+# ThermoVue Pro for the built-in Tiny2-C thermal camera (thermovue/; 64-bit repack of
+# the stock app, replaces M170infisens). ArmorParts powers the camera off if it dies.
+PRODUCT_PACKAGES += \
+    ThermoVue
 
 # IMS: VoLTE / VoNR through the MediaTek in-modem IMS stack (see ims/README.md).
 PRODUCT_PACKAGES += \

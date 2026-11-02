@@ -1,0 +1,40 @@
+//
+// ThermoVue Pro (com.energy.tc2c): the stock app for the built-in InfiRay
+// Tiny2-C thermal camera. The kernel side (yft_tiny2c_usb power rails +
+// extcon-mtk-usb host route) is stock; the app powers the module through
+// /sys/devices/platform/yft_tiny2c_usb/tiny2c_usb_mode and
+// /sys/class/yft_extcon/tiny2c_mode, then streams it as a UVC device.
+//
+// The system is 64-bit only, so the 32-bit JNI libraries (~36 MiB) are
+// dropped. Re-signed with the platform key -> platform_app domain, which the
+// stock vendor policy allows to drive both nodes.
+//
+
+genrule {
+    name: "ThermoVue-arm64-apk",
+    srcs: ["//vendor/ulefone/gq5012bf1:M170infisens-apk"],
+    out: ["ThermoVue-arm64.apk"],
+    tools: ["zip2zip"],
+    cmd: "$(location zip2zip) -i $(in) -o $(out) " +
+        "-x 'lib/armeabi-v7a/*' -x 'META-INF/*.SF' -x 'META-INF/*.RSA' -x 'META-INF/*.MF'",
+}
+
+android_app_import {
+    name: "ThermoVue",
+    apk: ":ThermoVue-arm64-apk",
+    certificate: "platform",
+    system_ext_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    overrides: ["M170infisens"],
+    required: ["default-permissions-com.energy.tc2c"],
+}
+
+prebuilt_etc {
+    name: "default-permissions-com.energy.tc2c",
+    src: "default-permissions-com.energy.tc2c.xml",
+    filename: "default-permissions-com.energy.tc2c.xml",
+    sub_dir: "default-permissions",
+    system_ext_specific: true,
+}
