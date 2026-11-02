@@ -23,7 +23,7 @@ public final class LabDiagnosticsService extends Service {
             NfcAdapter a = NfcAdapter.getDefaultAdapter(LabDiagnosticsService.this);
             b.putString("adapter_state", a == null ? "absent" : a.isEnabled() ? "enabled" : "disabled");
             b.putString("driver_version", readDriverVersion());
-            for (String key : new String[] {"controller_identity", "nci_capabilities", "routing", "secure_elements", "irq", "power", "recovery", "type4_nfcee", "cache_generation"}) b.putString(key, "UNKNOWN: no verified cached observation");
+            for (String key : new String[] {"controller_identity", "nci_capabilities", "routing", "secure_elements", "irq", "power", "recovery", "type4_nfcee", "type4_lifecycle", "cache_generation"}) b.putString(key, "UNKNOWN: no verified cached observation");
             PowerManager power = getSystemService(PowerManager.class);
             b.putString("power", power == null ? "UNKNOWN" : "screen interactive=" + power.isInteractive() + "; autonomous CE power UNKNOWN");
             Supplier<int[]> current = source;
@@ -33,6 +33,9 @@ public final class LabDiagnosticsService extends Service {
                 if (v == null || v.length != 40 || v[0] != 1) return b;
                 b.putString("cache_generation", Integer.toString(v[1]) + "; observed framed packets=" + v[31]);
                 if (v[34] >= 0) b.putString("type4_nfcee", v[34] == 1 ? "CONFIGURED in owner; operational service separately build-disabled by default; RF unverified" : "DISABLED by effective owner configuration");
+                b.putString("type4_lifecycle", v[35] < 0 ? "UNKNOWN: no completed Type4 operation observed"
+                        : (v[35] == 1 ? "DEGRADED: last cleanup left RF restoration unverified; no automatic recovery" : "CLEAN at last cleanup; not a claim about current RF state")
+                        + "; degraded cleanups=" + (v[36] < 0 ? "UNKNOWN" : Integer.toString(v[36])));
                 if (v[4] >= 0) b.putString("controller_identity", "CACHED ST layout: hw=" + hex(v[4]) + ", revision=" + hex(v[5]) + ", firmware=" + hex(v[6]) + ", loader=" + hex(v[7]) + ", customer=" + hex(v[8]));
                 if (v[2] >= 0) {
                     StringBuilder caps = new StringBuilder("CACHED NCI=" + hex(v[2]) + "; CORE_INIT status=" + hex(v[9]) + "; interfaces=");

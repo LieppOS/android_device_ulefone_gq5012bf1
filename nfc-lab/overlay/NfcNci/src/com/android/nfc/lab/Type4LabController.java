@@ -22,7 +22,13 @@ public final class Type4LabController {
         token = nonce; uid = caller; writes = writeConsent; deadline = now + 60000;
     }
     private void check(int caller, long nonce, long now) {
-        if (faulted || token == 0 || nonce != token || caller != uid || now > deadline || !port.ready()) throw new IllegalStateException("No current approved Type4 session");
+        // Identity first: a foreign or forged caller is rejected without changing
+        // any session state, so it cannot fault or close someone else's session.
+        if (faulted || token == 0 || nonce != token || caller != uid) throw new IllegalStateException("No current approved Type4 session");
+        if (now > deadline) { cancel(); throw new IllegalStateException("Approved Type4 session expired"); }
+        // Backend unavailability (including a degraded native lifecycle) is a
+        // fail-stop condition, not a retryable error: close the session too.
+        if (!port.ready()) { faulted = true; cancel(); throw new IllegalStateException("Type4 backend unavailable or lifecycle degraded; session closed"); }
     }
     public synchronized void end(int caller, long nonce) {
         if (caller != uid || nonce != token) throw new SecurityException("Not the session owner");

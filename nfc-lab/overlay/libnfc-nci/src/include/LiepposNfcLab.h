@@ -26,6 +26,15 @@ inline std::array<int32_t, 40> Snapshot() {
 inline void SetType4Configured(bool configured) {
   auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex); c.values[34] = configured ? 1 : 0;
 }
+// Lifecycle health of the existing T4T setup/cleanup path. Degraded means RF
+// restoration is UNVERIFIED after an operation, not that a repair happened.
+inline void SetType4Health(bool degraded, unsigned degradedCount) {
+  auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex);
+  c.values[35] = degraded ? 1 : 0;
+  c.values[36] = degradedCount > unsigned(std::numeric_limits<int32_t>::max())
+                     ? std::numeric_limits<int32_t>::max()
+                     : int32_t(degradedCount);
+}
 inline void Observe(const uint8_t* b, size_t n) {
   if (!b || n < 3 || n != size_t(b[2]) + 3 || (b[0] & 0x10) != 0) return;
   auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex); auto& v = c.values;

@@ -40,6 +40,155 @@ diff --git a/NfcNci/AndroidManifest.xml b/NfcNci/AndroidManifest.xml
 +                 android:permission="org.lieppos.permission.NFC_LAB_TYPE4" />
      </application>
  </manifest>
+diff --git a/NfcNci/nci/jni/LiepposT4tLifecycle.h b/NfcNci/nci/jni/LiepposT4tLifecycle.h
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/nci/jni/LiepposT4tLifecycle.h
+@@ -0,0 +1,144 @@
++// SPDX-License-Identifier: Apache-2.0
++#ifndef LIEPPOS_T4T_LIFECYCLE_H
++#define LIEPPOS_T4T_LIFECYCLE_H
++
++#include <atomic>
++#include <mutex>
++
++// Transport-independent setup/cleanup policy for the existing T4T NDEF NFCEE
++// path. The real NativeT4tNfcee adapter and the offline fault-injection tests
++// drive the SAME object through Driver, so the tests exercise shipped logic
++// rather than a copy of it.
++//
++// Deliberate limits:
++//   * This never starts RF discovery that it did not itself stop.
++//   * It does not suppress, replace or retry the existing NFCC recovery path.
++//     startRfDiscovery() may still time out and trigger the stack's own
++//     recovery; that remains the stack's decision, and the result is only
++//     reported here as "degraded", never silently repaired.
++//   * A degraded result means restoration is UNVERIFIED, not that it failed
++//     safely. Callers must fail-stop, not retry.
++namespace lieppos::t4t {
++
++class Driver {
++ public:
++  virtual ~Driver() = default;
++  // Observed RF discovery state of the existing stack.
++  virtual bool isDiscoveryStarted() = 0;
++  // Requests the existing stack to start/stop discovery. May internally fail
++  // or trigger the stack's own timeout recovery; the result is re-observed.
++  virtual void startRfDiscovery(bool start) = 0;
++  // true when the underlying operation reported NFA_STATUS_OK.
++  virtual bool openConnection() = 0;
++  virtual bool closeConnection() = 0;
++  virtual void setBusy(bool busy) = 0;
++  // NFC OFF handling keeps the existing contract: do not close or restart,
++  // just release the shutdown waiter.
++  virtual bool isNfcOffTriggered() = 0;
++  virtual void notifyNfcOff() = 0;
++};
++
++class Lifecycle {
++ public:
++  // Acquires the single in-flight slot, stops discovery only if it is running,
++  // then opens the connection. Returns false without leaving state behind when
++  // another operation is in flight, the stop did not take effect, or the open
++  // failed. On false the caller must NOT call finish(): unwinding already ran.
++  bool begin(Driver& driver) {
++    if (mInFlight.exchange(true)) return false;  // Reject reentrancy; do not disturb the active session.
++    std::lock_guard<std::mutex> lock(mMutex);
++    mActive = true;
++    mDegraded = false;
++    mStoppedDiscovery = false;
++    mConnectionOpen = false;
++    driver.setBusy(true);
++    if (driver.isDiscoveryStarted()) {
++      driver.startRfDiscovery(false);
++      // Re-observe instead of assuming the request took effect.
++      mStoppedDiscovery = !driver.isDiscoveryStarted();
++      if (!mStoppedDiscovery) {
++        mDegraded = true;  // Discovery still running: refuse to open a connection under it.
++        finishLocked(driver);
++        return false;
++      }
++    }
++    if (!driver.openConnection()) {
++      finishLocked(driver);
++      return false;
++    }
++    mConnectionOpen = true;
++    return true;
++  }
++
++  // Idempotent. Returns true only when the connection closed cleanly and any
++  // discovery state this object changed was observed restored.
++  bool finish(Driver& driver) {
++    std::lock_guard<std::mutex> lock(mMutex);
++    return finishLocked(driver);
++  }
++
++  // For the existing NFC-OFF shutdown path, which closes outside this object.
++  // Restoration cannot be confirmed there, so the session ends degraded.
++  void abandon() {
++    std::lock_guard<std::mutex> lock(mMutex);
++    if (!mActive && !mInFlight.load()) return;
++    mActive = false;
++    mConnectionOpen = false;
++    mStoppedDiscovery = false;
++    mDegraded = true;
++    mInFlight = false;
++  }
++
++  bool active() const { return mInFlight.load(); }
++  bool degraded() const {
++    std::lock_guard<std::mutex> lock(mMutex);
++    return mDegraded;
++  }
++  unsigned degradedCount() const {
++    std::lock_guard<std::mutex> lock(mMutex);
++    return mDegradedCount;
++  }
++
++ private:
++  bool finishLocked(Driver& driver) {
++    if (!mActive) return !mDegraded;  // Second call performs no extra transport work.
++    mActive = false;
++    if (driver.isNfcOffTriggered()) {
++      // Existing contract: release the shutdown waiter and return. The shutdown
++      // path owns closing; discovery restoration is not attempted or claimed.
++      driver.notifyNfcOff();
++      mConnectionOpen = false;
++      mStoppedDiscovery = false;
++      mDegraded = true;
++      return release(driver);
++    }
++    if (mConnectionOpen) {
++      if (!driver.closeConnection()) mDegraded = true;  // Surfaced, not just logged.
++      mConnectionOpen = false;
++    }
++    if (mStoppedDiscovery) {
++      if (!driver.isDiscoveryStarted()) driver.startRfDiscovery(true);
++      if (!driver.isDiscoveryStarted()) mDegraded = true;  // Restoration unverified.
++      mStoppedDiscovery = false;
++    }
++    return release(driver);
++  }
++
++  bool release(Driver& driver) {
++    if (mDegraded && mDegradedCount < 0xFFFFFFFFu) ++mDegradedCount;
++    driver.setBusy(false);
++    mInFlight = false;
++    return !mDegraded;
++  }
++
++  mutable std::mutex mMutex;
++  std::atomic<bool> mInFlight{false};
++  bool mActive = false;
++  bool mStoppedDiscovery = false;
++  bool mConnectionOpen = false;
++  bool mDegraded = false;
++  unsigned mDegradedCount = 0;
++};
++
++}  // namespace lieppos::t4t
++#endif
 diff --git a/NfcNci/nci/jni/NativeNfcManager.cpp b/NfcNci/nci/jni/NativeNfcManager.cpp
 --- a/NfcNci/nci/jni/NativeNfcManager.cpp
 +++ b/NfcNci/nci/jni/NativeNfcManager.cpp
@@ -67,10 +216,168 @@ diff --git a/NfcNci/nci/jni/NativeNfcManager.cpp b/NfcNci/nci/jni/NativeNfcManag
      {"doDownload", "()Z", (void*)nfcManager_doDownload},
 
      {"initializeNativeStructure", "()Z", (void*)nfcManager_initNativeStruc},
+diff --git a/NfcNci/nci/jni/NativeT4tNfcee.cpp b/NfcNci/nci/jni/NativeT4tNfcee.cpp
+--- a/NfcNci/nci/jni/NativeT4tNfcee.cpp
++++ b/NfcNci/nci/jni/NativeT4tNfcee.cpp
+@@ -27,6 +27,9 @@
+ #include "nfa_nfcee_int.h"
+ #include "nfc_config.h"
+
++#include "LiepposT4tLifecycle.h"
++#include "LiepposNfcLab.h"
++
+ using android::base::StringPrintf;
+
+ /*Considering NCI response timeout which is 2s, Timeout set 100ms more*/
+@@ -40,6 +43,34 @@
+ extern void startRfDiscovery(bool isStart);
+ extern bool nfcManager_isNfcActive();
+ }  // namespace android
++
++namespace {
++// Adapter over the existing singleton's transport primitives.
++class T4tDriver : public lieppos::t4t::Driver {
++ public:
++  explicit T4tDriver(NativeT4tNfcee& owner) : mOwner(owner) {}
++  bool isDiscoveryStarted() override { return android::isDiscoveryStarted(); }
++  void startRfDiscovery(bool start) override { android::startRfDiscovery(start); }
++  bool openConnection() override { return mOwner.labOpenConnection() == NFA_STATUS_OK; }
++  bool closeConnection() override { return mOwner.labCloseConnection() == NFA_STATUS_OK; }
++  void setBusy(bool busy) override { mOwner.labSetBusy(busy); }
++  bool isNfcOffTriggered() override { return mOwner.labIsNfcOffTriggered(); }
++  void notifyNfcOff() override { mOwner.labNotifyNfcOff(); }
++
++ private:
++  NativeT4tNfcee& mOwner;
++};
++
++lieppos::t4t::Lifecycle& labLifecycle() {
++  static lieppos::t4t::Lifecycle lifecycle;
++  return lifecycle;
++}
++
++void publishLabHealth() {
++  lieppos::nfc_lab::SetType4Health(labLifecycle().degraded(),
++                                   labLifecycle().degradedCount());
++}
++}  // namespace
+
+ NativeT4tNfcee NativeT4tNfcee::sNativeT4tNfceeInstance;
+ bool NativeT4tNfcee::sIsNfcOffTriggered = false;
+@@ -101,6 +132,9 @@
+     }
+     /* Try to close the connection with t4t nfcee, discard the status */
+     (void)closeConnection();
++    /* The shutdown path owns closing here; restoration cannot be confirmed. */
++    labLifecycle().abandon();
++    publishLabHealth();
+     resetBusy();
+   }
+ }
+@@ -422,20 +456,16 @@
+ tNFA_STATUS NativeT4tNfcee::setup(void) {
+   static const char fn[] = "NativeT4tNfcee:setup";
+   LOG(DEBUG) << StringPrintf("%s", fn);
+-  tNFA_STATUS status = NFA_STATUS_FAILED;
+-  setBusy();
+-  if (android::isDiscoveryStarted()) {
+-    android::startRfDiscovery(false);
+-  }
+-
+-  status = openConnection();
+-  if (status != NFA_STATUS_OK) {
+-    LOG(ERROR) << StringPrintf("%s: openConnection Failed, status = 0x%X", fn,
+-                               status);
+-    if (!android::isDiscoveryStarted()) android::startRfDiscovery(true);
+-    resetBusy();
+-  }
+-  return status;
++  T4tDriver driver(*this);
++  // Rejects reentrancy, stops discovery only when it is actually running, and
++  // unwinds exactly what it changed when the open fails.
++  const bool ready = labLifecycle().begin(driver);
++  publishLabHealth();
++  if (!ready) {
++    LOG(ERROR) << StringPrintf("%s: setup refused or failed; no operation started", fn);
++    return NFA_STATUS_FAILED;
++  }
++  return NFA_STATUS_OK;
+ }
+ /*******************************************************************************
+ **
+@@ -449,19 +479,36 @@
+ void NativeT4tNfcee::cleanup(void) {
+   static const char fn[] = "NativeT4tNfcee:cleanup";
+   LOG(DEBUG) << StringPrintf("%s", fn);
+-  if (sIsNfcOffTriggered) {
+-    SyncEventGuard g(mT4tNfcOffEvent);
+-    mT4tNfcOffEvent.notifyOne();
+-    LOG(ERROR) << StringPrintf("%s: Nfc Off triggered", fn);
+-    return;
+-  }
+-  if (closeConnection() != NFA_STATUS_OK) {
+-    LOG(ERROR) << StringPrintf("%s: closeConnection Failed", fn);
+-  }
+-  if (!android::isDiscoveryStarted()) {
+-    android::startRfDiscovery(true);
+-  }
+-  resetBusy();
++  T4tDriver driver(*this);
++  // Idempotent: a repeated call performs no further transport work.
++  const bool clean = labLifecycle().finish(driver);
++  publishLabHealth();
++  if (!clean) {
++    // Surfaced for the lab gate instead of being logged and discarded. RF
++    // restoration is unverified here; callers must fail-stop, not retry.
++    LOG(ERROR) << StringPrintf("%s: cleanup degraded; RF restoration unverified", fn);
++  }
++}
++
++bool NativeT4tNfcee::labCleanupDegraded(void) { return labLifecycle().degraded(); }
++
++tNFA_STATUS NativeT4tNfcee::labOpenConnection(void) { return openConnection(); }
++
++tNFA_STATUS NativeT4tNfcee::labCloseConnection(void) { return closeConnection(); }
++
++void NativeT4tNfcee::labSetBusy(bool busy) {
++  if (busy) {
++    setBusy();
++  } else {
++    resetBusy();
++  }
++}
++
++bool NativeT4tNfcee::labIsNfcOffTriggered(void) { return sIsNfcOffTriggered; }
++
++void NativeT4tNfcee::labNotifyNfcOff(void) {
++  SyncEventGuard g(mT4tNfcOffEvent);
++  mT4tNfcOffEvent.notifyOne();
+ }
+
+ /*******************************************************************************
+diff --git a/NfcNci/nci/jni/NativeT4tNfcee.h b/NfcNci/nci/jni/NativeT4tNfcee.h
+--- a/NfcNci/nci/jni/NativeT4tNfcee.h
++++ b/NfcNci/nci/jni/NativeT4tNfcee.h
+@@ -225,6 +225,15 @@
+   *******************************************************************************/
+   std::vector<uint8_t> getT4TNfceeAid();
+
++  /* LieppOS lab lifecycle boundary. These expose existing primitives to the
++   * setup/cleanup policy object; they add no new controller command. */
++  bool labCleanupDegraded(void);
++  tNFA_STATUS labOpenConnection(void);
++  tNFA_STATUS labCloseConnection(void);
++  void labSetBusy(bool busy);
++  bool labIsNfcOffTriggered(void);
++  void labNotifyNfcOff(void);
++
+  private:
+   bool mBusy;
+   static NativeT4tNfcee sNativeT4tNfceeInstance;
 diff --git a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java b/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java
 --- a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java
 +++ b/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java
-@@ -98,7 +98,27 @@
+@@ -98,7 +98,40 @@
          mContext = context;
          mT4tNfceeMgr = new NativeT4tNfceeManager();
          sInstance = this;
@@ -80,17 +387,30 @@ diff --git a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java b/NfcNc
 +            public Object mutex() { return mT4tNfceeMgr; }
 +            public boolean ready() {
 +                int[] cache = getLabControllerMetadata();
-+                return cache != null && cache.length == 40 && cache[34] == 1
++                return cache != null && cache.length == 40 && cache[34] == 1 && cache[35] != 1
 +                        && mT4tNfceeMgr.isNdefNfceefeatureEnabled()
 +                        && mT4tNfceeMgr.isNdefNfceeEmulationSupported();
 +            }
++            // A degraded native cleanup means RF restoration is unverified, so the
++            // operation fails even when the data itself looked correct.
++            private void requireCleanLifecycle() {
++                int[] cache = getLabControllerMetadata();
++                if (cache == null || cache.length != 40 || cache[35] == 1)
++                    throw new IllegalStateException("Type4 lifecycle degraded; RF restoration unverified");
++            }
 +            public byte[] read(int fileId) {
 +                if (mT4tNfceeMgr.isNdefOperationOngoing()) throw new IllegalStateException("NDEF endpoint busy");
-+                return mT4tNfceeMgr.doReadData(new byte[] {(byte)(fileId >> 8), (byte)fileId});
++                requireCleanLifecycle();
++                byte[] value = mT4tNfceeMgr.doReadData(new byte[] {(byte)(fileId >> 8), (byte)fileId});
++                requireCleanLifecycle();
++                return value;
 +            }
 +            public int write(int fileId, byte[] data) {
 +                if (mT4tNfceeMgr.isNdefOperationOngoing()) throw new IllegalStateException("NDEF endpoint busy");
-+                return mT4tNfceeMgr.doWriteData(new byte[] {(byte)(fileId >> 8), (byte)fileId}, data);
++                requireCleanLifecycle();
++                int count = mT4tNfceeMgr.doWriteData(new byte[] {(byte)(fileId >> 8), (byte)fileId}, data);
++                requireCleanLifecycle();
++                return count;
 +            }
 +        });
 +    }
@@ -131,7 +451,7 @@ diff --git a/NfcNci/src/com/android/nfc/lab/LabDiagnosticsService.java b/NfcNci/
 new file mode 100644
 --- /dev/null
 +++ b/NfcNci/src/com/android/nfc/lab/LabDiagnosticsService.java
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,67 @@
 +// SPDX-License-Identifier: Apache-2.0
 +package com.android.nfc.lab;
 +
@@ -157,7 +477,7 @@ new file mode 100644
 +            NfcAdapter a = NfcAdapter.getDefaultAdapter(LabDiagnosticsService.this);
 +            b.putString("adapter_state", a == null ? "absent" : a.isEnabled() ? "enabled" : "disabled");
 +            b.putString("driver_version", readDriverVersion());
-+            for (String key : new String[] {"controller_identity", "nci_capabilities", "routing", "secure_elements", "irq", "power", "recovery", "type4_nfcee", "cache_generation"}) b.putString(key, "UNKNOWN: no verified cached observation");
++            for (String key : new String[] {"controller_identity", "nci_capabilities", "routing", "secure_elements", "irq", "power", "recovery", "type4_nfcee", "type4_lifecycle", "cache_generation"}) b.putString(key, "UNKNOWN: no verified cached observation");
 +            PowerManager power = getSystemService(PowerManager.class);
 +            b.putString("power", power == null ? "UNKNOWN" : "screen interactive=" + power.isInteractive() + "; autonomous CE power UNKNOWN");
 +            Supplier<int[]> current = source;
@@ -167,6 +487,9 @@ new file mode 100644
 +                if (v == null || v.length != 40 || v[0] != 1) return b;
 +                b.putString("cache_generation", Integer.toString(v[1]) + "; observed framed packets=" + v[31]);
 +                if (v[34] >= 0) b.putString("type4_nfcee", v[34] == 1 ? "CONFIGURED in owner; operational service separately build-disabled by default; RF unverified" : "DISABLED by effective owner configuration");
++                b.putString("type4_lifecycle", v[35] < 0 ? "UNKNOWN: no completed Type4 operation observed"
++                        : (v[35] == 1 ? "DEGRADED: last cleanup left RF restoration unverified; no automatic recovery" : "CLEAN at last cleanup; not a claim about current RF state")
++                        + "; degraded cleanups=" + (v[36] < 0 ? "UNKNOWN" : Integer.toString(v[36])));
 +                if (v[4] >= 0) b.putString("controller_identity", "CACHED ST layout: hw=" + hex(v[4]) + ", revision=" + hex(v[5]) + ", firmware=" + hex(v[6]) + ", loader=" + hex(v[7]) + ", customer=" + hex(v[8]));
 +                if (v[2] >= 0) {
 +                    StringBuilder caps = new StringBuilder("CACHED NCI=" + hex(v[2]) + "; CORE_INIT status=" + hex(v[9]) + "; interfaces=");
@@ -289,7 +612,7 @@ diff --git a/NfcNci/src/com/android/nfc/lab/Type4LabController.java b/NfcNci/src
 new file mode 100644
 --- /dev/null
 +++ b/NfcNci/src/com/android/nfc/lab/Type4LabController.java
-@@ -0,0 +1,67 @@
+@@ -0,0 +1,73 @@
 +// SPDX-License-Identifier: Apache-2.0
 +package com.android.nfc.lab;
 +
@@ -314,7 +637,13 @@ new file mode 100644
 +        token = nonce; uid = caller; writes = writeConsent; deadline = now + 60000;
 +    }
 +    private void check(int caller, long nonce, long now) {
-+        if (faulted || token == 0 || nonce != token || caller != uid || now > deadline || !port.ready()) throw new IllegalStateException("No current approved Type4 session");
++        // Identity first: a foreign or forged caller is rejected without changing
++        // any session state, so it cannot fault or close someone else's session.
++        if (faulted || token == 0 || nonce != token || caller != uid) throw new IllegalStateException("No current approved Type4 session");
++        if (now > deadline) { cancel(); throw new IllegalStateException("Approved Type4 session expired"); }
++        // Backend unavailability (including a degraded native lifecycle) is a
++        // fail-stop condition, not a retryable error: close the session too.
++        if (!port.ready()) { faulted = true; cancel(); throw new IllegalStateException("Type4 backend unavailable or lifecycle degraded; session closed"); }
 +    }
 +    public synchronized void end(int caller, long nonce) {
 +        if (caller != uid || nonce != token) throw new SecurityException("Not the session owner");
@@ -431,7 +760,7 @@ diff --git a/libnfc-nci/src/include/LiepposNfcLab.h b/libnfc-nci/src/include/Lie
 new file mode 100644
 --- /dev/null
 +++ b/libnfc-nci/src/include/LiepposNfcLab.h
-@@ -0,0 +1,95 @@
+@@ -0,0 +1,104 @@
 +// SPDX-License-Identifier: Apache-2.0
 +#ifndef LIEPPOS_NFC_LAB_H
 +#define LIEPPOS_NFC_LAB_H
@@ -459,6 +788,15 @@ new file mode 100644
 +}
 +inline void SetType4Configured(bool configured) {
 +  auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex); c.values[34] = configured ? 1 : 0;
++}
++// Lifecycle health of the existing T4T setup/cleanup path. Degraded means RF
++// restoration is UNVERIFIED after an operation, not that a repair happened.
++inline void SetType4Health(bool degraded, unsigned degradedCount) {
++  auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex);
++  c.values[35] = degraded ? 1 : 0;
++  c.values[36] = degradedCount > unsigned(std::numeric_limits<int32_t>::max())
++                     ? std::numeric_limits<int32_t>::max()
++                     : int32_t(degradedCount);
 +}
 +inline void Observe(const uint8_t* b, size_t n) {
 +  if (!b || n < 3 || n != size_t(b[2]) + 3 || (b[0] & 0x10) != 0) return;

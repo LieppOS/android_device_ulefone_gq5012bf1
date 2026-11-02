@@ -21,7 +21,8 @@ public final class Type4ControllerTest {
         reject(() -> c.write(1000, 1, 1, new byte[] {4})); check(p.writes == 0);
         check(c.read(1000, 1, 1).length == 3); c.end(1000, 1);
         c.begin(1000, 2, 100, true); check(c.write(1000, 2, 101, new byte[] {4, 5}) == 2); check(p.writes == 1); c.end(1000, 2);
-        c.begin(1000, 3, 200, true); reject(() -> c.read(1000, 3, 60201)); c.end(1000, 3);
+        // An expired session releases ownership itself; ending it again is rejected.
+        c.begin(1000, 3, 200, true); reject(() -> c.read(1000, 3, 60201)); check(c.status().equals("PASSIVE")); reject(() -> c.end(1000, 3));
         c.begin(1000, 4, 300, true); reject(() -> c.write(1000, 4, 301, new byte[8191])); check(p.writes == 1); c.end(1000, 4);
         c.begin(1000, 5, 400, true); p.cc[14] = (byte)255; reject(() -> c.write(1000, 5, 401, new byte[] {9}));
         check(p.writes == 1); check(c.status().startsWith("FAULTED")); reject(() -> c.begin(1000, 6, 402, false));

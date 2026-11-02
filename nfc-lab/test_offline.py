@@ -54,12 +54,32 @@ def main():
     rejected = subprocess.run(['make', '-s', '-f', str(fixture), 'PLATFORM_SDK_VERSION=36', 'LIEPPOS_NFC_LAB=true'], text=True, capture_output=True)
     assert rejected.returncode != 0, 'Wrong-platform lab opt-in must fail'
     print('PASS profile defaults/API guard and disabled operational service')
-    run("Verify reproducible pinned patch", [sys.executable, ROOT / "prepare_patch.py", source, "--check"])
+    # Patch checks always run against a pristine export of the pinned revision,
+    # so they stay valid whether or not the working checkout already has the
+    # patch applied. The export is read-only output; the checkout is untouched.
+    revision = subprocess.check_output([sys.executable, "-c", "import runpy,sys; m=runpy.run_path(sys.argv[1]); print(m['REVISION'])", str(ROOT / "prepare_patch.py")], text=True).strip()
+    pristine = out / "pinned-nfc-source"
+    if pristine.exists():
+        shutil.rmtree(pristine)
+    pristine.mkdir(parents=True)
+    print("Export pristine pinned NFC source", flush=True)
+    archive = subprocess.run(["git", "-c", "safe.directory=" + str(source), "--no-optional-locks", "archive", revision], cwd=source, stdout=subprocess.PIPE, check=True).stdout
+    subprocess.run(["tar", "-x", "-C", str(pristine)], input=archive, check=True)
+    (pristine / ".lieppos-pinned-revision").write_text(revision + "\n")
+    run("Verify reproducible pinned patch", [sys.executable, ROOT / "prepare_patch.py", pristine, "--check"])
     patch = ROOT.parent / "patches/packages_modules_Nfc/0001-lieppos-nfc-lab-cache-and-type4-compat.patch"
-    run("Check exact patch application (no files changed)", ["git", "-c", "safe.directory=" + str(source), "apply", "--check", patch], source)
+    run("Check exact patch application against the pinned revision", ["git", "apply", "--check", patch], pristine)
+    run("Check patch reverses cleanly (rollback path)", ["git", "apply", "--check", "-R", patch], source)
     header = ROOT / "overlay/libnfc-nci/src/include"
     run("Compile native cache/compatibility test with ASan/UBSan", ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-pthread", "-I", header, ROOT / "tests/native_test.cc", "-o", out / "native-test"])
     run("Run native parser, gating and concurrency tests", [out / "native-test"])
+    lifecycle = ROOT / "overlay/NfcNci/nci/jni"
+    for label, flags, binary in [
+        ("ASan/UBSan", ["-fsanitize=address,undefined"], out / "t4t-lifecycle-test"),
+        ("ThreadSanitizer", ["-fsanitize=thread"], out / "t4t-lifecycle-tsan"),
+    ]:
+        run("Compile T4T lifecycle fault-injection test with " + label, ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror", *flags, "-fno-omit-frame-pointer", "-pthread", "-I", lifecycle, ROOT / "tests/t4t_lifecycle_test.cc", "-o", binary])
+        run("Run T4T setup/cleanup fault injection under " + label, [binary])
     contracts = sorted((ROOT / "overlay/NfcNci/src/org/lieppos/nfclab/ipc").glob("*.aidl"))
     for contract in contracts:
         assert contract.read_bytes() == (app / "src/main/aidl/org/lieppos/nfclab/ipc" / contract.name).read_bytes(), "Binder contracts diverged"
@@ -72,8 +92,32 @@ def main():
         run("Compile NFC-owner Binder contract", [tools / "aidl", "-I" + str(ROOT / "overlay/NfcNci/src"), "-p" + str(platform / "framework.aidl"), "-o" + str(gen), contract])
     services = sorted((ROOT / "overlay/NfcNci/src/com/android/nfc/lab").glob("*.java"))
     run("Compile real owner services against Android37 SDK (not platform build)", ["javac", "--release", "11", "-cp", platform / "android.jar", "-d", classes, *services, *gen.rglob("*.java")])
-    run("Compile pure Type4 ownership simulation", ["javac", "--release", "11", "-d", classes, ROOT / "overlay/NfcNci/src/com/android/nfc/lab/Type4LabController.java", ROOT / "tests/Type4ControllerTest.java"])
+    run("Compile pure Type4 ownership simulation", ["javac", "--release", "11", "-d", classes, ROOT / "overlay/NfcNci/src/com/android/nfc/lab/Type4LabController.java", ROOT / "tests/Type4ControllerTest.java", ROOT / "tests/Type4SecurityTest.java"])
     run("Run Type4 ownership simulation", ["java", "-ea", "-cp", classes, "Type4ControllerTest"])
+    run("Run Type4 security, teardown and concurrency simulation", ["java", "-ea", "-cp", classes, "Type4SecurityTest"])
+    # Bytecode evidence that every exported transaction reaches the permission
+    # and build gates. AMS/Binder enforcement itself still needs a device test.
+    gates = {
+        "LabType4Service": ("require", ["beginSession", "readNdef", "writeNdef", "endSession"]),
+        "LabDiagnosticsService": ("enforceCallingOrSelfPermission", ["snapshot"]),
+    }
+    for service, (gate, methods) in gates.items():
+        listing = subprocess.check_output(["javap", "-p", "-c", "-cp", str(classes), "com.android.nfc.lab." + service + "$1"], text=True)
+        bodies, current = {}, None
+        for line in listing.splitlines():
+            name = re.match(r"\s{2}\S.*?\b(\w+)\(", line)
+            if name:
+                current = name.group(1)
+                bodies[current] = []
+            elif current:
+                bodies[current].append(line)
+        for method in methods:
+            assert method in bodies, service + " is missing transaction " + method
+            assert any(gate in line for line in bodies[method]), service + "." + method + " does not reach " + gate
+    outer = subprocess.check_output(["javap", "-p", "-c", "-cp", str(classes), "com.android.nfc.lab.LabType4Service"], text=True)
+    assert "enforceCallingOrSelfPermission" in outer and "getBoolean" in outer, "require() must check the permission and the build gate"
+    assert "PERMISSION" in outer
+    print("PASS exported-transaction permission/build-gate bytecode checks (not AMS runtime enforcement)")
     # Compile the exact added JNI function body against real JDK JNI types, not fake Android stubs.
     text = patch.read_text()
     lines = []
