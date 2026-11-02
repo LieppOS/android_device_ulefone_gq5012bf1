@@ -120,9 +120,53 @@ Outputs and logs are under canonical `build/nfc-lab/`. `full-apex-inputs.json` r
 
 Native audit found a real enablement blocker in the unchanged upstream Type4 path: `setup()`/`cleanup()` can restart discovery without preserving its initial stopped state, and cleanup close failures are logged without being reflected in an otherwise successful data result. Existing `NativeNfcManager::startRfDiscovery()` can also invoke normal NFCC-timeout recovery. The **new layer** adds no automatic retry/recovery, but it cannot promise that the **existing stack** never recovers. Keep the operational resource/configuration gates off until narrowly tested native hardening and explicit runtime/RF approval.
 
+## Reproducible integration (replaces the temporary export)
+
+The app is now a **manifest project**, `packages/apps/LieppOSNfcLab` from
+`LieppOS/NFC-ESP32-Android`, declared in `manifests/android_manifest/default.xml`.
+The build tree's copy is a real VCS checkout of the reviewed commit, not a
+hand-copied export. Integration is one documented, idempotent, reversible step:
+
+```sh
+# after the tree is synced; applies the pinned patch only, nothing else
+python3 device/ulefone/gq5012bf1/nfc-lab/integrate.py <android-tree> --apply
+python3 device/ulefone/gq5012bf1/nfc-lab/integrate.py <android-tree> --revert
+```
+
+`integrate.py` verifies the NFC project is at the pinned revision, reports the
+app project's checkout and origin, refuses to touch a tree that neither matches
+nor accepts the patch, and performs no sync, fetch, push, build, install or
+device operation. Applying twice is a no-op; `--revert` restores the tree.
+
+**Honest limitation:** the lab commits are local and unpushed, so a fresh
+`repo sync` of `main` does not yet contain them. Until they are reviewed onto
+`main` and pushed, a clean-room reproduction needs those commits supplied
+explicitly. The patch itself is fully reproducible from `prepare_patch.py`.
+
+## Lifecycle hardening
+
+`overlay/NfcNci/nci/jni/LiepposT4tLifecycle.h` holds the setup/cleanup policy
+that the patched `NativeT4tNfcee` now uses. It re-observes discovery state
+instead of assuming requests took effect, never starts discovery it did not
+itself stop, refuses reentrant operations, closes exactly once, is idempotent,
+and reports a degraded verdict when a close fails or restoration cannot be
+confirmed. The verdict reaches the lab gate through cache slots 35/36, so a
+degraded cleanup closes the session and blocks new ones; it is also shown in
+diagnostics as `type4_lifecycle`.
+
+It does **not** replace, suppress or retry the existing NFCC recovery path:
+`startRfDiscovery()` can still time out and let the stack recover on its own.
+"Degraded" means restoration is unverified, not that it was repaired.
+
+`tests/t4t_lifecycle_test.cc` drives the shipped object through a mock of the
+existing stack: nominal round trip, discovery already stopped, ignored stop
+request, open failure, close failure, failed restoration, idempotent cleanup,
+sticky degraded verdict, reentrancy, NFC-off, shutdown abandon, timeout-shaped
+failure, per-session verdict reset and an 8-thread contention invariant.
+
 ## Remaining engineering
 
-1. Make the reviewed app/patch synchronization reproducible through the canonical manifest/ownership workflow before long-term deployment; the authorized build-only export is not that migration.
+1. Push the reviewed commits so a plain `repo sync` reproduces the build inputs.
 2. Run actual framework Binder/lifecycle/native integration tests and complete VINTF/product qualification; offline build/signature/policy success does not establish runtime behavior.
 3. Harden/test the native Type4 discovery/close-error paths before enabling its lab resource. The new layer refuses retries; it does not magically fix native restoration.
 4. Review the kernel exclusive-open race and recovery error paths with ABI/KMI/module builds before any source change; none was made just to claim kernel work.
