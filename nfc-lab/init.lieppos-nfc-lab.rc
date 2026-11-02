@@ -1,0 +1,5 @@
+# Included only by the opt-in NFC Lab product profile. Source-only in this mission.
+# /data is shared across slots: applying this label change requires separate boot/test approval.
+on post-fs-data
+    mkdir /data/nfc 0770 nfc nfc
+    restorecon_recursive /data/nfc

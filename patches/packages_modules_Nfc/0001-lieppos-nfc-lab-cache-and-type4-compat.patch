@@ -1,0 +1,529 @@
+From: LieppOS NFC Lab
+Subject: [PATCH] nfc: cached lab diagnostics and opt-in ST21 Type4 compatibility
+
+Base: 5b3b95382170fde2d778f8521e6ae3fcbc73307a (Lineage packages/modules/Nfc)
+No raw commands, frozen AIDL changes, or default RF enablement.
+Operational Type4 access is separately permissioned and build-disabled.
+
+diff --git a/NfcNci/Android.bp b/NfcNci/Android.bp
+--- a/NfcNci/Android.bp
++++ b/NfcNci/Android.bp
+@@ -146,6 +146,7 @@
+     name: "nfc-sources",
+     srcs: [
+         "src/**/*.java",
++        "src/**/*.aidl",
+         "nci/**/*.java",
+         ":framework-nfc-javastream-protos",
+         ":statslog-Nfc-java-gen",
+diff --git a/NfcNci/AndroidManifest.xml b/NfcNci/AndroidManifest.xml
+--- a/NfcNci/AndroidManifest.xml
++++ b/NfcNci/AndroidManifest.xml
+@@ -75,6 +75,8 @@
+     <uses-permission android:name="android.permission.UPDATE_DEVICE_STATS"/>
+
+     <protected-broadcast android:name="android.nfc.intent.action.WATCHDOG" />
++    <permission android:name="org.lieppos.permission.NFC_LAB_DIAGNOSTICS" android:protectionLevel="signature" />
++    <permission android:name="org.lieppos.permission.NFC_LAB_TYPE4" android:protectionLevel="signature" />
+     <application android:name=".NfcApplication"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+@@ -160,5 +162,11 @@
+
+         <service android:name=".handover.PeripheralHandoverService"
+         />
++        <service android:name="com.android.nfc.lab.LabDiagnosticsService"
++                 android:exported="true"
++                 android:permission="org.lieppos.permission.NFC_LAB_DIAGNOSTICS" />
++        <service android:name="com.android.nfc.lab.LabType4Service"
++                 android:exported="true" android:enabled="@bool/lieppos_nfc_lab_type4_enabled"
++                 android:permission="org.lieppos.permission.NFC_LAB_TYPE4" />
+     </application>
+ </manifest>
+diff --git a/NfcNci/nci/jni/NativeNfcManager.cpp b/NfcNci/nci/jni/NativeNfcManager.cpp
+--- a/NfcNci/nci/jni/NativeNfcManager.cpp
++++ b/NfcNci/nci/jni/NativeNfcManager.cpp
+@@ -28,6 +28,7 @@
+ #include "JavaClassConstants.h"
+ #include "NativeWlcManager.h"
+ #include "NfcAdaptation.h"
++#include "LiepposNfcLab.h"
+ #ifdef DTA_ENABLED
+ #include "NfcDta.h"
+ #endif /* DTA_ENABLED */
+@@ -3036,7 +3037,15 @@
+ ** JNI functions for android-4.0.1_r1
+ **
+ *****************************************************************************/
++static jintArray nfcManager_getLabControllerMetadata(JNIEnv* env, jobject) {
++  const auto snapshot = lieppos::nfc_lab::Snapshot();
++  jintArray result = env->NewIntArray(snapshot.size());
++  if (result) env->SetIntArrayRegion(result, 0, snapshot.size(), snapshot.data());
++  return result;
++}
++
+ static JNINativeMethod gMethods[] = {
++    {"getLabControllerMetadata", "()[I", (void*)nfcManager_getLabControllerMetadata},
+     {"doDownload", "()Z", (void*)nfcManager_doDownload},
+
+     {"initializeNativeStructure", "()Z", (void*)nfcManager_initNativeStruc},
+diff --git a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java b/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java
+--- a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java
++++ b/NfcNci/nci/src/com/android/nfc/dhimpl/NativeNfcManager.java
+@@ -98,7 +98,27 @@
+         mContext = context;
+         mT4tNfceeMgr = new NativeT4tNfceeManager();
+         sInstance = this;
+-    }
++        com.android.nfc.lab.LabDiagnosticsService.attachSource(this::getLabControllerMetadata);
++        com.android.nfc.lab.LabType4Service.attachPort(new com.android.nfc.lab.Type4LabController.Port() {
++            public Object mutex() { return mT4tNfceeMgr; }
++            public boolean ready() {
++                int[] cache = getLabControllerMetadata();
++                return cache != null && cache.length == 40 && cache[34] == 1
++                        && mT4tNfceeMgr.isNdefNfceefeatureEnabled()
++                        && mT4tNfceeMgr.isNdefNfceeEmulationSupported();
++            }
++            public byte[] read(int fileId) {
++                if (mT4tNfceeMgr.isNdefOperationOngoing()) throw new IllegalStateException("NDEF endpoint busy");
++                return mT4tNfceeMgr.doReadData(new byte[] {(byte)(fileId >> 8), (byte)fileId});
++            }
++            public int write(int fileId, byte[] data) {
++                if (mT4tNfceeMgr.isNdefOperationOngoing()) throw new IllegalStateException("NDEF endpoint busy");
++                return mT4tNfceeMgr.doWriteData(new byte[] {(byte)(fileId >> 8), (byte)fileId}, data);
++            }
++        });
++    }
++
++    public native int[] getLabControllerMetadata();
+
+     public native boolean initializeNativeStructure();
+
+diff --git a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeT4tNfceeManager.java b/NfcNci/nci/src/com/android/nfc/dhimpl/NativeT4tNfceeManager.java
+--- a/NfcNci/nci/src/com/android/nfc/dhimpl/NativeT4tNfceeManager.java
++++ b/NfcNci/nci/src/com/android/nfc/dhimpl/NativeT4tNfceeManager.java
+@@ -18,11 +18,11 @@
+ import com.android.nfc.DeviceHost;
+
+ public class NativeT4tNfceeManager {
+-  public native int doWriteData(byte[] fileId, byte[] data);
++  public synchronized native int doWriteData(byte[] fileId, byte[] data);
+
+-  public native byte[] doReadData(byte[] fileId);
++  public synchronized native byte[] doReadData(byte[] fileId);
+
+-  public native boolean doClearNdefData();
++  public synchronized native boolean doClearNdefData();
+
+   public native boolean isNdefOperationOngoing();
+
+diff --git a/NfcNci/res/values/lieppos_nfc_lab.xml b/NfcNci/res/values/lieppos_nfc_lab.xml
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/res/values/lieppos_nfc_lab.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <!-- Source/build opt-in only after full platform review. Never enabled by diagnostics. -->
++    <bool name="lieppos_nfc_lab_type4_enabled">false</bool>
++</resources>
+diff --git a/NfcNci/src/com/android/nfc/lab/LabDiagnosticsService.java b/NfcNci/src/com/android/nfc/lab/LabDiagnosticsService.java
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/src/com/android/nfc/lab/LabDiagnosticsService.java
+@@ -0,0 +1,64 @@
++// SPDX-License-Identifier: Apache-2.0
++package com.android.nfc.lab;
++
++import android.app.Service;
++import android.content.Intent;
++import android.nfc.NfcAdapter;
++import android.os.*;
++import org.lieppos.nfclab.ipc.ILabDiagnostics;
++import java.nio.charset.StandardCharsets;
++import java.nio.file.Files;
++import java.nio.file.Paths;
++import java.util.function.Supplier;
++
++/** Runs in the NFC owner process. Snapshot only: never opens the controller or issues a command. */
++public final class LabDiagnosticsService extends Service {
++    public static final String PERMISSION = "org.lieppos.permission.NFC_LAB_DIAGNOSTICS";
++    private static volatile Supplier<int[]> source;
++    public static void attachSource(Supplier<int[]> currentOwnerCache) { source = currentOwnerCache; }
++    private final ILabDiagnostics.Stub api = new ILabDiagnostics.Stub() {
++        @Override public Bundle snapshot() {
++            enforceCallingOrSelfPermission(PERMISSION, "NFC Lab diagnostics requires the NFC signing identity");
++            Bundle b = new Bundle(); b.putInt("schema_version", 1); b.putString("source", "NFC owner; cached normal initialization only");
++            NfcAdapter a = NfcAdapter.getDefaultAdapter(LabDiagnosticsService.this);
++            b.putString("adapter_state", a == null ? "absent" : a.isEnabled() ? "enabled" : "disabled");
++            b.putString("driver_version", readDriverVersion());
++            for (String key : new String[] {"controller_identity", "nci_capabilities", "routing", "secure_elements", "irq", "power", "recovery", "type4_nfcee", "cache_generation"}) b.putString(key, "UNKNOWN: no verified cached observation");
++            PowerManager power = getSystemService(PowerManager.class);
++            b.putString("power", power == null ? "UNKNOWN" : "screen interactive=" + power.isInteractive() + "; autonomous CE power UNKNOWN");
++            Supplier<int[]> current = source;
++            if (current != null) {
++                int[] v;
++                try { v = current.get(); } catch (IllegalStateException notReady) { return b; }
++                if (v == null || v.length != 40 || v[0] != 1) return b;
++                b.putString("cache_generation", Integer.toString(v[1]) + "; observed framed packets=" + v[31]);
++                if (v[34] >= 0) b.putString("type4_nfcee", v[34] == 1 ? "CONFIGURED in owner; operational service separately build-disabled by default; RF unverified" : "DISABLED by effective owner configuration");
++                if (v[4] >= 0) b.putString("controller_identity", "CACHED ST layout: hw=" + hex(v[4]) + ", revision=" + hex(v[5]) + ", firmware=" + hex(v[6]) + ", loader=" + hex(v[7]) + ", customer=" + hex(v[8]));
++                if (v[2] >= 0) {
++                    StringBuilder caps = new StringBuilder("CACHED NCI=" + hex(v[2]) + "; CORE_INIT status=" + hex(v[9]) + "; interfaces=");
++                    if (v[10] < 0 || v[10] > 16) caps.append("UNKNOWN");
++                    else for (int i = 0; i < v[10]; i++) caps.append(hex(v[13 + i])).append(' ');
++                    caps.append("; routing capacity=").append(v[11]).append("; control payload=").append(v[12]);
++                    b.putString("nci_capabilities", caps.toString());
++                }
++                b.putString("recovery", "Recovery invocation/result UNKNOWN; reset-notification generation=" + v[1]);
++            }
++            // getRoutingTable(), NFCEE queries and recovery methods are intentionally NOT called.
++            return b;
++        }
++    };
++    private static String hex(int n) { return n < 0 ? "UNKNOWN" : "0x" + Integer.toHexString(n); }
++    private static String readDriverVersion() {
++        try {
++            byte[] bytes = Files.readAllBytes(Paths.get("/sys/module/st21nfc/version"));
++            if (bytes.length > 64) return "UNKNOWN: unexpected sysfs value";
++            String value = new String(bytes, StandardCharsets.US_ASCII).trim();
++            return value.matches("[0-9.]{1,32}") ? value : "UNKNOWN: unrecognized driver version";
++        } catch (java.io.IOException | SecurityException unavailable) { return "UNKNOWN: sysfs read not permitted/available"; }
++    }
++    @Override public IBinder onBind(Intent intent) {
++        // AMS enforces the manifest permission at bind time; each transaction
++        // rechecks the remote caller. onBind itself runs as the service UID.
++        return api;
++    }
++}
+diff --git a/NfcNci/src/com/android/nfc/lab/LabType4Service.java b/NfcNci/src/com/android/nfc/lab/LabType4Service.java
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/src/com/android/nfc/lab/LabType4Service.java
+@@ -0,0 +1,84 @@
++// SPDX-License-Identifier: Apache-2.0
++package com.android.nfc.lab;
++
++import android.app.Service;
++import android.content.Intent;
++import android.nfc.NdefMessage;
++import android.os.*;
++import org.lieppos.nfclab.ipc.ILabType4;
++import java.security.SecureRandom;
++
++/** Disabled-default, signature-protected operational endpoint in the existing NFC process.
++ * No firmware/configuration/reset/raw-command/routing API. The existing native Type4
++ * setup/cleanup owns discovery transitions; failures stop further laboratory operations.
++ */
++public final class LabType4Service extends Service {
++    public static final String PERMISSION = "org.lieppos.permission.NFC_LAB_TYPE4";
++    private static volatile Type4LabController controller;
++    public static void attachPort(Type4LabController.Port port) { controller = new Type4LabController(port); }
++    private final SecureRandom random = new SecureRandom();
++    private final Object ownership = new Object();
++    private IBinder lifetime;
++    private IBinder.DeathRecipient death;
++    private long currentToken;
++    private int currentUid = -1;
++    private Type4LabController require() {
++        enforceCallingOrSelfPermission(PERMISSION, "NFC-owner Type4 permission required");
++        int id = getResources().getIdentifier("lieppos_nfc_lab_type4_enabled", "bool", getPackageName());
++        if (id == 0 || !getResources().getBoolean(id) || controller == null) throw new IllegalStateException("Type4 lab build/profile unavailable");
++        return controller;
++    }
++    private void unlink() {
++        if (lifetime != null && death != null) try { lifetime.unlinkToDeath(death, 0); }
++        catch (java.util.NoSuchElementException alreadyDead) { /* Binder has already removed this death recipient. */ }
++        lifetime = null; death = null; currentToken = 0; currentUid = -1;
++    }
++    private final ILabType4.Stub api = new ILabType4.Stub() {
++        @Override public long beginSession(IBinder owner, boolean allowWrites) throws RemoteException {
++            Type4LabController c = require(); if (owner == null) throw new IllegalArgumentException("A Binder lifetime is required");
++            synchronized (ownership) {
++                if (lifetime != null) throw new IllegalStateException("End the previous lab session first");
++                final int uid = Binder.getCallingUid(); long value; do { value = random.nextLong(); } while (value == 0);
++                final long nonce = value;
++                c.begin(uid, nonce, SystemClock.elapsedRealtime(), allowWrites);
++                lifetime = owner; currentToken = nonce; currentUid = uid;
++                death = () -> { synchronized (ownership) {
++                    if (currentToken != nonce || currentUid != uid) return;
++                    try { c.end(uid, nonce); } catch (SecurityException alreadyEnded) { /* The controller may have failed closed first. */ }
++                    unlink();
++                } };
++                try { owner.linkToDeath(death, 0); } catch (RemoteException dead) { c.end(uid, nonce); unlink(); throw dead; }
++                return nonce;
++            }
++        }
++        @Override public byte[] readNdef(long token) {
++            Type4LabController c = require(); synchronized (ownership) {
++                byte[] bytes = c.read(Binder.getCallingUid(), token, SystemClock.elapsedRealtime());
++                if (bytes.length != 0) try { new NdefMessage(bytes); } catch (android.nfc.FormatException e) { throw new IllegalStateException("Controller returned non-NDEF data"); }
++                return bytes;
++            }
++        }
++        @Override public int writeNdef(long token, byte[] message) {
++            Type4LabController c = require();
++            if (message == null || message.length == 0 || message.length > 8190) throw new IllegalArgumentException("Bounded NDEF required");
++            try { new NdefMessage(message); } catch (android.nfc.FormatException e) { throw new IllegalArgumentException("Invalid NDEF"); }
++            synchronized (ownership) { return c.write(Binder.getCallingUid(), token, SystemClock.elapsedRealtime(), message); }
++        }
++        @Override public void endSession(long token) {
++            Type4LabController c = require(); synchronized (ownership) {
++                int uid = Binder.getCallingUid();
++                if (uid != currentUid || token != currentToken) throw new SecurityException("Not the session owner");
++                try { c.end(uid, token); } finally { unlink(); }
++            }
++        }
++    };
++    @Override public IBinder onBind(Intent i) {
++        // Manifest permission is enforced by AMS. require() checks the remote
++        // caller and the build gate on every operational transaction instead.
++        return api;
++    }
++    @Override public void onDestroy() {
++        synchronized (ownership) { if (controller != null && currentToken != 0) controller.cancel(); unlink(); }
++        super.onDestroy();
++    }
++}
+diff --git a/NfcNci/src/com/android/nfc/lab/Type4LabController.java b/NfcNci/src/com/android/nfc/lab/Type4LabController.java
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/src/com/android/nfc/lab/Type4LabController.java
+@@ -0,0 +1,67 @@
++// SPDX-License-Identifier: Apache-2.0
++package com.android.nfc.lab;
++
++import java.util.Arrays;
++
++/** Pure ownership/bounds policy; only the NFC-owner adapter supplies the real transport. */
++public final class Type4LabController {
++    public interface Port {
++        boolean ready(); // Cached flags only, must not trigger initialization.
++        byte[] read(int fileId);
++        int write(int fileId, byte[] message);
++        default Object mutex() { return this; }
++    }
++    private final Port port;
++    private long token, deadline;
++    private int uid = -1;
++    private boolean writes, faulted;
++    public Type4LabController(Port port) { this.port = port; }
++    public synchronized void begin(int caller, long nonce, long now, boolean writeConsent) {
++        if (faulted || !port.ready()) throw new IllegalStateException("Type4 backend unavailable/faulted");
++        if (nonce == 0 || caller < 0 || (token != 0 && now <= deadline)) throw new IllegalStateException("Invalid or busy session");
++        token = nonce; uid = caller; writes = writeConsent; deadline = now + 60000;
++    }
++    private void check(int caller, long nonce, long now) {
++        if (faulted || token == 0 || nonce != token || caller != uid || now > deadline || !port.ready()) throw new IllegalStateException("No current approved Type4 session");
++    }
++    public synchronized void end(int caller, long nonce) {
++        if (caller != uid || nonce != token) throw new SecurityException("Not the session owner");
++        cancel();
++    }
++    public synchronized void cancel() { token = 0; uid = -1; writes = false; }
++    private int capacity(boolean requireWrite) {
++        byte[] c = port.read(0xE103);
++        if (c == null || c.length < 15 || c.length > 255 || c[0] != 0 || (c[1] & 255) < 15 || (c[1] & 255) > c.length
++                || c[2] != 0x20 || c[7] != 4 || c[8] != 6 || (c[9] & 255) != 0xE1 || c[10] != 4 || c[13] != 0 || (requireWrite && c[14] != 0))
++            throw new IllegalStateException("Unrecognized/read-protected Type4 CC or write denied");
++        int size = ((c[11] & 255) << 8) | (c[12] & 255);
++        if (size < 2 || size > 8192) throw new IllegalStateException("Unvalidated Type4 capacity");
++        return size - 2;
++    }
++    public synchronized byte[] read(int caller, long nonce, long now) {
++        check(caller, nonce, now);
++        synchronized (port.mutex()) {
++            try {
++                int maximum = capacity(false); byte[] value = port.read(0xE104);
++                if (value == null || value.length > maximum) throw new IllegalStateException("Type4 read failed/out of bounds");
++                return value.clone();
++            } catch (RuntimeException e) { faulted = true; cancel(); throw e; }
++        }
++    }
++    public synchronized int write(int caller, long nonce, long now, byte[] ndef) {
++        check(caller, nonce, now);
++        if (!writes) throw new SecurityException("Session is read-only");
++        if (ndef == null || ndef.length == 0 || ndef.length > 8190) throw new IllegalArgumentException("Invalid NDEF length");
++        byte[] copy = ndef.clone();
++        synchronized (port.mutex()) {
++            try {
++                int maximum = capacity(true);
++                if (copy.length > maximum) throw new IllegalArgumentException("NDEF exceeds CC capacity");
++                int count = port.write(0xE104, copy);
++                if (count != copy.length || !Arrays.equals(copy, port.read(0xE104))) throw new IllegalStateException("Type4 write/readback failed; do not retry automatically");
++                return count;
++            } catch (RuntimeException e) { faulted = true; cancel(); throw e; }
++        }
++    }
++    public synchronized String status() { return faulted ? "FAULTED: route restoration unverified; no automatic recovery" : token == 0 ? "PASSIVE" : "APPROVED_SESSION"; }
++}
+diff --git a/NfcNci/src/org/lieppos/nfclab/ipc/ILabDiagnostics.aidl b/NfcNci/src/org/lieppos/nfclab/ipc/ILabDiagnostics.aidl
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/src/org/lieppos/nfclab/ipc/ILabDiagnostics.aidl
+@@ -0,0 +1,7 @@
++// SPDX-License-Identifier: Apache-2.0
++package org.lieppos.nfclab.ipc;
++import android.os.Bundle;
++/** Read-only, schema-versioned snapshots. No command, routing, recovery or firmware API. */
++interface ILabDiagnostics {
++    Bundle snapshot();
++}
+diff --git a/NfcNci/src/org/lieppos/nfclab/ipc/ILabType4.aidl b/NfcNci/src/org/lieppos/nfclab/ipc/ILabType4.aidl
+new file mode 100644
+--- /dev/null
++++ b/NfcNci/src/org/lieppos/nfclab/ipc/ILabType4.aidl
+@@ -0,0 +1,9 @@
++// SPDX-License-Identifier: Apache-2.0
++package org.lieppos.nfclab.ipc;
++/** Operational NFCEE access, separate from passive diagnostics. Disabled by default. */
++interface ILabType4 {
++    long beginSession(IBinder lifetime, boolean allowOwnedTestWrites);
++    byte[] readNdef(long token);
++    int writeNdef(long token, in byte[] message);
++    void endSession(long token);
++}
+diff --git a/libnfc-nci/src/adaptation/NfcAdaptation.cc b/libnfc-nci/src/adaptation/NfcAdaptation.cc
+--- a/libnfc-nci/src/adaptation/NfcAdaptation.cc
++++ b/libnfc-nci/src/adaptation/NfcAdaptation.cc
+@@ -21,6 +21,8 @@
+ #include <aidl/android/hardware/nfc/BnNfcClientCallback.h>
+ #include <aidl/android/hardware/nfc/INfc.h>
+ #include <android-base/logging.h>
++#include <android-base/file.h>
++#include "LiepposNfcLab.h"
+ #include <android-base/properties.h>
+ #include <android-base/stringprintf.h>
+ #include <android/binder_ibinder.h>
+@@ -378,6 +380,7 @@
+       ALOGI("sendData skipped: empty data!!!");
+       return ::ndk::ScopedAStatus::ok();
+     }
++    lieppos::nfc_lab::Observe(copy.data(), copy.size());
+     if (sVndExtnsPresent) {
+       bool isVndExtSpecRsp =
+           sNfcVendorExtn->processRspNtf(copy.size(), copy.data());
+@@ -509,8 +512,21 @@
+                       ConfigValue((uint8_t)aidlConfigValue.offHostSIMPipeId));
+     configMap.emplace(NAME_OFF_HOST_ESE_PIPE_ID,
+                       ConfigValue((uint8_t)aidlConfigValue.offHostESEPipeId));
+-    configMap.emplace(NAME_T4T_NFCEE_ENABLE,
+-                      ConfigValue(aidlConfigValue.t4tNfceeEnable ? 1 : 0));
++    // Frozen AIDL V1 remains unchanged. Only this board's explicitly opted-in,
++    // already-enabled ST NFCEE profile may compensate for the legacy false field.
++    const auto labBoard = android::base::GetProperty("ro.product.vendor.device", "");
++    const bool labOptIn = android::base::GetBoolProperty(
++        "nfc.lieppos.st21_t4t_compat", false);
++    std::string stConfig;
++    if (!aidlConfigValue.t4tNfceeEnable && labOptIn && labBoard == "gq5012bf1") {
++      if (!android::base::ReadFileToString("/vendor/etc/libnfc-hal-st.conf", &stConfig)) {
++        stConfig.clear();  // Fail closed; no policy relaxation or file write.
++      }
++    }
++    const bool labType4Configured = lieppos::nfc_lab::EffectiveT4t(
++        aidlConfigValue.t4tNfceeEnable, labBoard, labOptIn, stConfig);
++    lieppos::nfc_lab::SetType4Configured(labType4Configured);
++    configMap.emplace(NAME_T4T_NFCEE_ENABLE, ConfigValue(labType4Configured ? 1 : 0));
+
+     if (aidlConfigValue.offHostSimPipeIds.size() != 0) {
+       configMap.emplace(NAME_OFF_HOST_SIM_PIPE_IDS,
+diff --git a/libnfc-nci/src/include/LiepposNfcLab.h b/libnfc-nci/src/include/LiepposNfcLab.h
+new file mode 100644
+--- /dev/null
++++ b/libnfc-nci/src/include/LiepposNfcLab.h
+@@ -0,0 +1,95 @@
++// SPDX-License-Identifier: Apache-2.0
++#ifndef LIEPPOS_NFC_LAB_H
++#define LIEPPOS_NFC_LAB_H
++
++#include <algorithm>
++#include <array>
++#include <cstddef>
++#include <cstdint>
++#include <limits>
++#include <mutex>
++#include <sstream>
++#include <string>
++
++namespace lieppos::nfc_lab {
++// One inline state object in libnfc_nci_jni (libnfc-nci is statically linked there).
++// No frame/payload, AID, UID, APDU, key or general NFCEE data is retained.
++struct Cache {
++  std::mutex mutex;
++  std::array<int32_t, 40> values;
++  Cache() { values.fill(-1); values[0] = 1; values[1] = 0; values[31] = 0; }
++};
++inline Cache& cache() { static Cache c; return c; }
++inline std::array<int32_t, 40> Snapshot() {
++  auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex); return c.values;
++}
++inline void SetType4Configured(bool configured) {
++  auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex); c.values[34] = configured ? 1 : 0;
++}
++inline void Observe(const uint8_t* b, size_t n) {
++  if (!b || n < 3 || n != size_t(b[2]) + 3 || (b[0] & 0x10) != 0) return;
++  auto& c = cache(); std::lock_guard<std::mutex> lock(c.mutex); auto& v = c.values;
++  if (v[31] < std::numeric_limits<int32_t>::max()) ++v[31];
++  // The last NCI MT/GID/OID only, never data contents. Data packets are not described.
++  if ((b[0] & 0xE0) == 0x40 || (b[0] & 0xE0) == 0x60) v[32] = (int32_t(b[0]) << 8) | b[1];
++  if (b[0] == 0x60 && b[1] == 0 && n >= 8 && (b[5] == 0x20 || b[5] == 0x21) && size_t(b[7]) == n - 8) {
++    if (v[1] < std::numeric_limits<int32_t>::max()) ++v[1];
++    std::fill(v.begin() + 2, v.begin() + 31, -1); // Never mix capabilities across resets.
++    v[2] = b[5]; v[3] = b[6];
++    // Narrow vendor decoder from the inspected ST reset parser. Unknown layouts stay unknown.
++    if (b[6] == 2 && b[3] == 1 && n >= 33 && b[8] == 4) {
++      v[4] = b[8]; v[5] = b[9];
++      v[6] = int32_t((uint32_t(b[10]) << 24) | (uint32_t(b[11]) << 16) | (uint32_t(b[12]) << 8) | b[13]);
++      v[7] = (int32_t(b[14]) << 16) | (int32_t(b[15]) << 8) | b[16];
++      v[8] = (int32_t(b[31]) << 8) | b[32];
++    }
++  }
++  if (b[0] != 0x40 || b[1] != 1 || n < 4) return;
++  v[9] = b[3]; std::fill(v.begin() + 10, v.begin() + 31, -1);
++  // NCI2 CORE_INIT layout, matched to nfc_main.cc at the pinned source revision.
++  if (b[3] != 0 || v[2] < 0x20 || n < 17 || b[16] > 16) return;
++  size_t cursor = 17; const size_t count = b[16]; std::array<int32_t, 16> interfaces{};
++  for (size_t i = 0; i < count; ++i) {
++    if (cursor + 2 > n) return;
++    interfaces[i] = b[cursor++]; size_t ext = b[cursor++];
++    if (ext > n - cursor) return;
++    cursor += ext;
++  }
++  if (cursor != n) return;
++  v[10] = int32_t(count); v[11] = int32_t(b[9]) | (int32_t(b[10]) << 8); v[12] = b[11];
++  for (size_t i = 0; i < count; ++i) v[13 + i] = interfaces[i];
++}
++inline std::string Trim(std::string s) {
++  const auto first = s.find_first_not_of(" \t\r");
++  if (first == std::string::npos) return {};
++  return s.substr(first, s.find_last_not_of(" \t\r") - first + 1);
++}
++inline bool StConfigEnablesNdef(const std::string& config) {
++  if (config.size() > 65536) return false;
++  std::istringstream stream(config); std::string line;
++  int enable = -1; bool module = false, firmware = false;
++  bool seenModule = false, seenFirmware = false;
++  while (std::getline(stream, line)) {
++    line = Trim(line.substr(0, line.find('#'))); auto separator = line.find('=');
++    if (separator == std::string::npos) continue;
++    auto key = Trim(line.substr(0, separator)), value = Trim(line.substr(separator + 1));
++    if (key == "NDEF_NFCEE_ENABLE") {
++      if (enable != -1 || (value != "0" && value != "1")) return false;
++      enable = value == "1" ? 1 : 0;
++    } else if (key == "NCI_HAL_MODULE") {
++      if (seenModule) return false;
++      seenModule = true;
++      module = value == "\"nfc_nci.st21nfc\"";
++    } else if (key == "STNFC_FW_BIN_NAME") {
++      if (seenFirmware) return false;
++      seenFirmware = true;
++      firmware = value == "\"st21nfc_fw7.bin\"";
++    }
++  }
++  return enable == 1 && module && firmware;
++}
++inline bool EffectiveT4t(bool halAdvertised, const std::string& board, bool labOptIn, const std::string& config) {
++  return halAdvertised || (board == "gq5012bf1" && labOptIn && StConfigEnablesNdef(config));
++}
++}  // namespace lieppos::nfc_lab
++#endif

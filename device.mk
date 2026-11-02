@@ -204,6 +204,9 @@ ifneq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_SHIPPING_API_LEVEL := 35
 endif
 
+# Disabled-default NFC Lab app/profile; normal NFC and firmware stay unchanged.
+$(call inherit-product, $(DEVICE_PATH)/nfc-lab/nfc-lab.mk)
+
 # Proprietary
 $(call inherit-product, vendor/ulefone/gq5012bf1/gq5012bf1-vendor.mk)
 
