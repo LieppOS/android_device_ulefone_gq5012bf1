@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Offer the auxiliary rear cameras: 2 = ultrawide (S5KJN1MAIN2, 16 mm) and
+         3 = night vision (OV64B; the kernel lights the IR LEDs while it streams).
+         0 (main) and 1 (front) are always shown. All four are standalone,
+         BACKWARD_COMPATIBLE, non-logical camera devices. -->
+    <bool name="config_enableAuxCameras">true</bool>
+
     <!-- Main camera (IMX989): 60 fps video through MediaTek HFPS, which the stock
          HAL serves up to 1920x1080@60 (availableHfpsMaxResolutions; sensor mode
          4096x2304@60 scaled down, full field of view). Measured 59.5 fps sensor
