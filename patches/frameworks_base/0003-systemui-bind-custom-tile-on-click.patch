@@ -1,0 +1,62 @@
+--- a/packages/SystemUI/src/com/android/systemui/qs/external/CustomTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/external/CustomTile.java
+@@ -432,6 +432,7 @@ public class CustomTile extends QSTileImpl<State> implements TileChangeListener,
+                 startActivityAndCollapse(mTile.getActivityLaunchForClick());
+             } else {
+                 mService.onClick(mToken);
++                mServiceManager.onClickQueued();
+             }
+         } catch (RemoteException e) {
+             // Called through wrapper, won't happen here.
+--- a/packages/SystemUI/src/com/android/systemui/qs/external/TileLifecycleManager.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/external/TileLifecycleManager.java
+@@ -633,6 +633,17 @@ public class TileLifecycleManager extends BroadcastReceiver implements
+     @Override
+     public void onClick(IBinder iBinder) {
+         if (mDebug) Log.d(TAG, "onClick " + iBinder + " " + getComponent() + " " + mUser);
++        if (mOptionalWrapper.isEmpty()) {
++            // LieppOS: not connected yet (bind pending or no bind slot). Queue the click for
++            // onServiceConnected. Treating this as a death tore down the pending bind and
++            // delayed the click by the 1-20 s rebind backoff.
++            mClickBinder = iBinder;
++            queueMessage(MSG_ON_CLICK);
++            if (mOptionalWrapper.isPresent()) {
++                handlePendingMessages(); // connected while queueing
++            }
++            return;
++        }
+         if (isNullOrFailedAction(mOptionalWrapper, (wrapper) -> {
+             final String packageName = mIntent.getComponent().getPackageName();
+             try {
+--- a/packages/SystemUI/src/com/android/systemui/qs/external/TileServiceManager.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/external/TileServiceManager.java
+@@ -162,6 +162,19 @@ public class TileServiceManager {
+         }
+     }
+ 
++    /**
++     * LieppOS: a click was queued while unbound. A pending click is the top bind priority,
++     * but bind slots were only recalculated on later events (e.g. another tile's
++     * MIN_BIND_TIME expiring), so the click waited up to 5 s.
++     */
++    public void onClickQueued() {
++        mHandler.post(() -> {
++            if (!mBound && mStateManager.hasPendingClick()) {
++                mServices.recalculateBindAllowance();
++            }
++        });
++    }
++
+     void onStartListeningFromRequest() {
+         mListeningFromRequest.set(true);
+         mStateManager.onStartListening();
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/impl/custom/domain/interactor/CustomTileServiceInteractor.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/impl/custom/domain/interactor/CustomTileServiceInteractor.kt
+@@ -141,6 +141,7 @@ constructor(
+     /** Sends click event to [TileService] using [IQSTileService.onClick]. */
+     fun onClick(token: IBinder) {
+         tileServiceInterface.onClick(token)
++        getTileServiceManager().onClickQueued()
+     }
+ 
+     private fun getTileServiceManager(): TileServiceManager =
