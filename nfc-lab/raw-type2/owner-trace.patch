@@ -1,0 +1,47 @@
+--- a/NfcNci/nci/jni/rawt2/OwnerCore.h
++++ b/NfcNci/nci/jni/rawt2/OwnerCore.h
+@@ -443,16 +443,18 @@
+   }
+   void record(const std::string& text) {
+     if (audit_.size() == 64) audit_.pop_front();
+-    audit_.push_back(text);
++    // Unique IDs preserve repeated packets through client de-duplication and
++    // expose any loss when the bounded ring wraps between status polls.
++    audit_.push_back(std::to_string(++auditSequence_) + " " + text);
+   }
+   static std::string hex(const Bytes& bytes) {
+     const char* digits = "0123456789ABCDEF";
+     std::string out;
+-    for (size_t i = 0; i < bytes.size() && i < 96; ++i) {
++    for (size_t i = 0; i < bytes.size() && i < 258; ++i) {
+       out += digits[bytes[i] >> 4];
+       out += digits[bytes[i] & 15];
+     }
+-    if (bytes.size() > 96) out += "...";
++    if (bytes.size() > 258) out += "...";
+     return out;
+   }
+   void fail(const std::string& why) {
+@@ -803,6 +805,7 @@
+   std::string reason_;
+   std::deque<std::string> audit_;
+   uint64_t now_ = 0, deadline_ = 0, lease_ = 0, exclusiveAfterSerial_ = 0;
++  uint64_t auditSequence_ = 0;
+   size_t restoreIndex_ = 0;
+   bool gated_ = false, used_ = false, hostDh_ = false, hostIdle_ = false;
+   bool hostExclusive_ = false, hostDiscoveryOn_ = false;
+--- a/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
++++ b/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
+@@ -177,9 +177,9 @@
+   nci2 = nci2Observed;
+   if (!tx && n >= 3 && b[0] == 0x61 && b[1] == 5) activated = true;
+   if (!tx && n >= 3 && b[0] == 0x61 && b[1] == 6) activated = false;
+-  if (n > 0 && (b[0] & 0xe0) == 0 && (!tx || !admission().active())) return;
+-  // Only outgoing data during maintenance is audit-recorded. NFA_DATA_EVT
+-  // supplies the bounded, validated receive frame to the model.
++  if (n > 0 && (b[0] & 0xe0) == 0 && !admission().active()) return;
++  // Both data directions are audit-only during maintenance. NFA_DATA_EVT,
++  // not this raw wire tap, remains the validated command source for the model.
+   runtime().owner.wire(tx, b, n, dh, idle, exclusive, discoveryOn);
+   runtime().wake();
+ }
