@@ -1,0 +1,54 @@
+//
+// RevampedFMRadio for the GQ5012BF1 (MT6878 CONNSYS FM on the MT6637 A-die).
+// Upstream: https://github.com/iusmac/RevampedFMRadio branch mtk, see LIEPPOS.md
+// for the pinned revision and every local change.
+//
+// It drives the stock fmradio_drv_connac2x driver through /dev/fm and the
+// stock MediaTek audio HAL (AudioALSAFMController); no FM driver, firmware or
+// HAL is replaced. It replaces the stock YftFmRadio (same package name), whose
+// libyftfmjni.so is not part of the extracted vendor payload, and Lineage's
+// FMRadio.
+//
+// No system UID: platform-signed -> platform_app(_36) domain, the context the
+// stock vendor policy already allows to open /dev/fm (fm_device);
+// ACCESS_BROADCAST_RADIO adds the media group /dev/fm (media:media 0660) needs.
+//
+
+android_app {
+    name: "RevampedFMRadio",
+
+    srcs: ["src/**/*.java"],
+
+    certificate: "platform",
+    platform_apis: true,
+    privileged: true,
+    system_ext_specific: true,
+
+    jni_libs: ["libmtkfmjni"],
+
+    required: [
+        "privapp_whitelist_com.android.fmradio_revamped.xml",
+        "RevampedFmRecordingsProvider",
+    ],
+    static_libs: ["androidx.cardview_cardview"],
+
+    overrides: [
+        "FMRadio",
+        "YftFmRadio",
+    ],
+
+    optimize: {
+        enabled: false,
+    },
+
+    aaptflags: ["--auto-add-overlay"],
+}
+
+prebuilt_etc {
+    name: "privapp_whitelist_com.android.fmradio_revamped.xml",
+
+    src: "privapp_whitelist_com.android.fmradio.xml",
+    filename: "privapp_whitelist_com.android.fmradio.xml",
+    relative_install_path: "permissions",
+    system_ext_specific: true,
+}
