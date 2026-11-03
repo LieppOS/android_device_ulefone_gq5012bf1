@@ -1,0 +1,113 @@
+diff --git a/app/src/main/java/org/lineageos/aperture/CameraActivity.kt b/app/src/main/java/org/lineageos/aperture/CameraActivity.kt
+index edae6e0..ea1a049 100644
+--- a/app/src/main/java/org/lineageos/aperture/CameraActivity.kt
++++ b/app/src/main/java/org/lineageos/aperture/CameraActivity.kt
+@@ -90,6 +90,7 @@ import org.lineageos.aperture.ext.setColorCorrectionAberrationMode
+ import org.lineageos.aperture.ext.setDistortionCorrectionMode
+ import org.lineageos.aperture.ext.setEdgeMode
+ import org.lineageos.aperture.ext.setFrameRate
++import org.lineageos.aperture.ext.setMediaTekHfpsMode
+ import org.lineageos.aperture.ext.setHotPixelMode
+ import org.lineageos.aperture.ext.setNoiseReductionMode
+ import org.lineageos.aperture.ext.setPadding
+@@ -1633,6 +1634,15 @@ open class CameraActivity : AppCompatActivity(R.layout.activity_camera) {
+                         else -> null
+                     }
+                 )
++                .setMediaTekHfpsMode(
++                    cameraConfiguration.camera.takeIf { it.supportsMediaTekHfps }?.let {
++                        cameraConfiguration is CameraConfiguration.Video &&
++                                it.needsMediaTekHfps(
++                                    cameraConfiguration.videoQuality,
++                                    cameraConfiguration.videoFrameRate,
++                                )
++                    }
++                )
+                 .setVideoStabilizationMode(
+                     when (cameraConfiguration) {
+                         is CameraConfiguration.Video -> when (
+diff --git a/app/src/main/java/org/lineageos/aperture/ext/CaptureRequestOptionsBuilder.kt b/app/src/main/java/org/lineageos/aperture/ext/CaptureRequestOptionsBuilder.kt
+index 4cff361..3bb3263 100644
+--- a/app/src/main/java/org/lineageos/aperture/ext/CaptureRequestOptionsBuilder.kt
++++ b/app/src/main/java/org/lineageos/aperture/ext/CaptureRequestOptionsBuilder.kt
+@@ -27,6 +27,22 @@ fun <ValueT> CaptureRequestOptions.Builder.setOrClearCaptureRequestOption(
+     setCaptureRequestOption(key, it)
+ } ?: clearCaptureRequestOption(key)
+ 
++private val MEDIATEK_HFPS_MODE = CaptureRequest.Key(
++    "com.mediatek.streamingfeature.hfpsMode", IntArray::class.java
++)
++
++/**
++ * Set MediaTek's high frame rate video mode. Pass null on cameras without HFPS:
++ * setting an unknown vendor tag fails.
++ */
++@androidx.camera.camera2.interop.ExperimentalCamera2Interop
++fun CaptureRequestOptions.Builder.setMediaTekHfpsMode(
++    enabled: Boolean?
++) = setOrClearCaptureRequestOption(
++    MEDIATEK_HFPS_MODE,
++    enabled?.let { intArrayOf(if (it) 1 else 0) },
++)
++
+ @androidx.camera.camera2.interop.ExperimentalCamera2Interop
+ fun CaptureRequestOptions.Builder.setFrameRate(
+     frameRate: FrameRate?
+diff --git a/app/src/main/java/org/lineageos/aperture/models/Camera.kt b/app/src/main/java/org/lineageos/aperture/models/Camera.kt
+index 0847e6f..23a01b5 100644
+--- a/app/src/main/java/org/lineageos/aperture/models/Camera.kt
++++ b/app/src/main/java/org/lineageos/aperture/models/Camera.kt
+@@ -143,6 +143,39 @@ class Camera private constructor(
+ 
+     val supportsZsl = cameraInfo.isZslSupported
+ 
++    /**
++     * MediaTek high frame rate video (HFPS): the largest (width, height, fps) the vendor
++     * HAL records at when com.mediatek.streamingfeature.hfpsMode is set, or null if the
++     * camera has no HFPS. On MediaTek HALs frame rates above 30 fps are only reachable
++     * through this mode, even though the AE target FPS range is accepted.
++     */
++    private val mediaTekHfpsMaxResolution: IntArray? = runCatching {
++        val modes = camera2CameraInfo.getCameraCharacteristic(MEDIATEK_HFPS_MODES)
++        camera2CameraInfo.getCameraCharacteristic(MEDIATEK_HFPS_MAX_RESOLUTIONS)
++            ?.takeIf { modes?.contains(1) == true && it.size >= 3 }
++    }.getOrNull()
++
++    /**
++     * Whether this camera has MediaTek HFPS; only then may the vendor tag be set.
++     */
++    val supportsMediaTekHfps = mediaTekHfpsMaxResolution != null
++
++    /**
++     * Whether recording [quality] at [frameRate] needs and is covered by MediaTek HFPS.
++     */
++    fun needsMediaTekHfps(quality: Quality, frameRate: FrameRate?): Boolean {
++        val max = mediaTekHfpsMaxResolution ?: return false
++        val fps = frameRate?.value ?: return false
++        val (width, height) = when (quality) {
++            Quality.SD -> 720 to 480
++            Quality.HD -> 1280 to 720
++            Quality.FHD -> 1920 to 1080
++            Quality.UHD -> 3840 to 2160
++            else -> return false
++        }
++        return fps > 30 && fps <= max[2] && width.toLong() * height <= max[0].toLong() * max[1]
++    }
++
+     val cameraXCameraState = cameraInfo.cameraState.asFlow<CameraState>()
+ 
+     val supportedEdgeModes = camera2CameraInfo.getAndMapCameraCharacteristics(
+@@ -277,6 +310,13 @@ class Camera private constructor(
+     }.toSet()
+ 
+     companion object {
++        private val MEDIATEK_HFPS_MODES = CameraCharacteristics.Key(
++            "com.mediatek.streamingfeature.availableHfpsModes", IntArray::class.java
++        )
++        private val MEDIATEK_HFPS_MAX_RESOLUTIONS = CameraCharacteristics.Key(
++            "com.mediatek.streamingfeature.availableHfpsMaxResolutions", IntArray::class.java
++        )
++
+         fun fromCameraX(
+             cameraXCameraInfo: CameraInfo,
+             extensionsManager: ExtensionsManager,

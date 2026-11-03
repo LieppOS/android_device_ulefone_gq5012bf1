@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Main camera (IMX989): 60 fps video through MediaTek HFPS, which the stock
+         HAL serves up to 1920x1080@60 (availableHfpsMaxResolutions; sensor mode
+         4096x2304@60 scaled down, full field of view). Measured 59.5 fps sensor
+         and encoder output at 1080p. 4K60 is not offered: the ISP delivers only
+         ~38 fps at 4096x2304 (tools/ulefone/gq5012bf1/encoder-bench). -->
+    <string-array name="config_additionalVideoConfigurations" translatable="false">
+        <item>0</item> <item>hd|fhd</item> <item>60</item>
+    </string-array>
+</resources>

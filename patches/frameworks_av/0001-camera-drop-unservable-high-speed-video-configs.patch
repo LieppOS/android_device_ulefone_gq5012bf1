@@ -1,0 +1,134 @@
+diff --git a/services/camera/libcameraservice/common/CameraProviderManager.cpp b/services/camera/libcameraservice/common/CameraProviderManager.cpp
+index cfa8e6d8df..bcbedfdb68 100644
+--- a/services/camera/libcameraservice/common/CameraProviderManager.cpp
++++ b/services/camera/libcameraservice/common/CameraProviderManager.cpp
+@@ -45,6 +45,8 @@
+ #include <functional>
+ #include <camera_metadata_hidden.h>
+ #include <android-base/parseint.h>
++#include <android-base/properties.h>
++#include <android-base/strings.h>
+ #include <android-base/logging.h>
+ #include <android/content/res/CameraCompatibilityInfo.h>
+ #include <cutils/properties.h>
+@@ -1728,6 +1730,76 @@ status_t CameraProviderManager::ProviderInfo::DeviceInfo3::addDynamicDepthTags(
+     return OK;
+ }
+ 
++// Some HALs advertise constrained high-speed video sizes they cannot serve and
++// abort when such a session is configured (e.g. MediaTek MT6878: 3840x2160 at
++// 120 fps has no sensor mode). The device lists them in
++//   ro.vendor.camera.drop_high_speed_video_sizes=<cameraId>:<W>x<H>[,...]
++// and they are removed here, so the framework rejects such sessions instead.
++status_t CameraProviderManager::ProviderInfo::DeviceInfo3::removeUnservableHighSpeedVideoConfigs() {
++    const std::string list =
++            base::GetProperty("ro.vendor.camera.drop_high_speed_video_sizes", "");
++    if (list.empty()) return OK;
++
++    std::vector<std::pair<int32_t, int32_t>> drop;
++    for (const std::string& item : base::Split(list, ",")) {
++        const std::string entry = base::Trim(item);
++        const size_t colon = entry.find(':');
++        if (colon == std::string::npos || entry.substr(0, colon) != mId) continue;
++        int32_t w = 0, h = 0;
++        if (sscanf(entry.c_str() + colon + 1, "%dx%d", &w, &h) == 2 && w > 0 && h > 0) {
++            drop.emplace_back(w, h);
++        }
++    }
++    if (drop.empty()) return OK;
++
++    auto& c = mCameraCharacteristics;
++    const camera_metadata_entry configs =
++            c.find(ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS);
++    // Entries are (width, height, fps_min, fps_max, batch_size_max).
++    if (configs.count == 0 || configs.count % 5 != 0) return OK;
++
++    std::vector<int32_t> kept;
++    size_t removed = 0;
++    for (size_t i = 0; i < configs.count; i += 5) {
++        const std::pair<int32_t, int32_t> size(configs.data.i32[i], configs.data.i32[i + 1]);
++        if (std::find(drop.begin(), drop.end(), size) != drop.end()) {
++            removed++;
++            continue;
++        }
++        kept.insert(kept.end(), configs.data.i32 + i, configs.data.i32 + i + 5);
++    }
++    if (removed == 0) return OK;
++
++    status_t res;
++    if (!kept.empty()) {
++        res = c.update(ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS,
++                kept.data(), kept.size());
++    } else {
++        // Nothing left: the device no longer offers constrained high-speed video.
++        res = c.erase(ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS);
++        const camera_metadata_entry caps = c.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
++        if (res == OK && caps.count > 0) {
++            std::vector<uint8_t> newCaps;
++            for (size_t i = 0; i < caps.count; i++) {
++                if (caps.data.u8[i] !=
++                        ANDROID_REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO) {
++                    newCaps.push_back(caps.data.u8[i]);
++                }
++            }
++            res = c.update(ANDROID_REQUEST_AVAILABLE_CAPABILITIES, newCaps.data(),
++                    newCaps.size());
++        }
++    }
++    if (res != OK) {
++        ALOGE("%s: Camera %s: failed to update high-speed video configurations: %s (%d)",
++                __FUNCTION__, mId.c_str(), strerror(-res), res);
++        return res;
++    }
++    ALOGI("%s: Camera %s: removed %zu unservable high-speed video configuration(s)",
++            __FUNCTION__, mId.c_str(), removed);
++    return OK;
++}
++
+ status_t CameraProviderManager::ProviderInfo::DeviceInfo3::fixupTorchStrengthTags() {
+     status_t res = OK;
+     auto& c = mCameraCharacteristics;
+diff --git a/services/camera/libcameraservice/common/CameraProviderManager.h b/services/camera/libcameraservice/common/CameraProviderManager.h
+index 6af6c6fe26..cf74b0b97d 100644
+--- a/services/camera/libcameraservice/common/CameraProviderManager.h
++++ b/services/camera/libcameraservice/common/CameraProviderManager.h
+@@ -782,6 +782,7 @@ private:
+             status_t fixupMonochromeTags();
+             status_t fixupTorchStrengthTags();
+             status_t fixupManualFlashStrengthControlTags(CameraMetadata& ch);
++            status_t removeUnservableHighSpeedVideoConfigs();
+             status_t addDynamicDepthTags(bool maxResolution = false);
+             status_t deriveHeicTags(bool maxResolution = false);
+             status_t deriveJpegRTags(bool maxResolution = false);
+diff --git a/services/camera/libcameraservice/common/aidl/AidlProviderInfo.cpp b/services/camera/libcameraservice/common/aidl/AidlProviderInfo.cpp
+index 4c19ccf20e..63eb767366 100644
+--- a/services/camera/libcameraservice/common/aidl/AidlProviderInfo.cpp
++++ b/services/camera/libcameraservice/common/aidl/AidlProviderInfo.cpp
+@@ -592,6 +592,11 @@ AidlProviderInfo::AidlDeviceInfo3::AidlDeviceInfo3(
+                 __FUNCTION__, strerror(-res), res);
+         return;
+     }
++    res = removeUnservableHighSpeedVideoConfigs();
++    if (OK != res) {
++        ALOGE("%s: Unable to remove unservable high-speed video configurations: %s (%d)",
++                __FUNCTION__, strerror(-res), res);
++    }
+ 
+     auto stat = addDynamicDepthTags();
+     if (OK != stat) {
+diff --git a/services/camera/libcameraservice/common/hidl/HidlProviderInfo.cpp b/services/camera/libcameraservice/common/hidl/HidlProviderInfo.cpp
+index 790c580154..6fb9517609 100644
+--- a/services/camera/libcameraservice/common/hidl/HidlProviderInfo.cpp
++++ b/services/camera/libcameraservice/common/hidl/HidlProviderInfo.cpp
+@@ -628,6 +628,11 @@ HidlProviderInfo::HidlDeviceInfo3::HidlDeviceInfo3(
+                 __FUNCTION__, strerror(-res), res);
+         return;
+     }
++    res = removeUnservableHighSpeedVideoConfigs();
++    if (OK != res) {
++        ALOGE("%s: Unable to remove unservable high-speed video configurations: %s (%d)",
++                __FUNCTION__, strerror(-res), res);
++    }
+ 
+     auto stat = addDynamicDepthTags();
+     if (OK != stat) {

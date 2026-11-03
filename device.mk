@@ -73,6 +73,18 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.camera.concurrent.prebuilt.xml
 
+# Aperture: 720p/1080p60 on the main camera through MediaTek HFPS (overlay plus
+# patches/packages_apps_Aperture/0001, which sets the hfpsMode vendor tag).
+PRODUCT_PACKAGES += \
+    ApertureOverlayGq5012bf1
+
+# The stock HAL advertises 3840x2160 constrained high-speed video (60-120 and
+# 120 fps) on camera 0 but has no sensor mode for it and aborts when such a
+# session is configured. cameraserver drops these entries
+# (patches/frameworks_av/0001), so the framework rejects such sessions instead.
+PRODUCT_VENDOR_PROPERTIES += \
+    ro.vendor.camera.drop_high_speed_video_sizes=0:3840x2160
+
 # DRM
 PRODUCT_PACKAGES += \
     android.hardware.drm-service.clearkey

@@ -4,3 +4,5 @@ ro.vendor.mtk_trustkernel_tee_support u:object_r:vendor_mtk_trustkernel_tee_prop
 ro.vendor.trustkernel.                 u:object_r:vendor_mtk_trustkernel_tee_prop:s0
 vendor.trustkernel.                    u:object_r:vendor_mtk_trustkernel_tee_prop:s0
 ro.boot.rpmb_status                    u:object_r:vendor_mtk_trustkernel_tee_prop:s0
+# Vendor camera configuration read by cameraserver (patches/frameworks_av/0001).
+ro.vendor.camera.drop_high_speed_video_sizes u:object_r:camera_config_prop:s0 exact string

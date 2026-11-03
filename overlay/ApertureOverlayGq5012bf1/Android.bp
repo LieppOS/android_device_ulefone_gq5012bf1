@@ -1,0 +1,9 @@
+//
+// Aperture overlay for Ulefone GQ5012BF1: 720p/1080p at 60 fps on the main
+// camera. Needs patches/packages_apps_Aperture/0001 (MediaTek hfpsMode).
+//
+
+runtime_resource_overlay {
+    name: "ApertureOverlayGq5012bf1",
+    product_specific: true,
+}
