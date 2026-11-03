@@ -1,6 +1,7 @@
 //
 // Armor lights: Quick Settings tiles for the GQ5012BF1 super flashlight
-// (LN2403 camping light: off/lowest/max) and the red and blue LEDs.
+// (LN2403 camping light: off/lowest/max) and the red and blue LEDs, the
+// thermal camera guard and the uSmart accessory notification.
 //
 
 android_app {

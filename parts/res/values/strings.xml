@@ -7,4 +7,9 @@
     <string name="state_off">Off</string>
     <string name="state_low">Low</string>
     <string name="state_max">Max</string>
+    <string name="usmart_channel">uSmart accessories</string>
+    <string name="usmart_channel_desc">Shown while an accessory is attached to the uSmart connector</string>
+    <string name="usmart_connected">uSmart accessory connected</string>
+    <string name="usmart_unnamed">USB device</string>
+    <string name="usmart_usb_c_note">USB-C data (adb, file transfer) is paused while it is attached: both share the phone\'s USB controller.</string>
 </resources>
