@@ -108,6 +108,20 @@ PRODUCT_SYSTEM_PROPERTIES += \
 PRODUCT_PACKAGES += \
     ArmorPartsGq5012bf1
 
+# FM radio: RevampedFMRadio (fmradio/, iusmac mtk v3.1.3) on the stock
+# fmradio_drv_connac2x driver, stock FM firmware and the stock MediaTek audio HAL.
+# Replaces the stock YftFmRadio, whose libyftfmjni.so is not in the vendor payload.
+# libmtkfmjni reads persist.vendor.connsys.fm_chipid first; this platform reports
+# "connac2x", which it does not map, so pin the id the driver returns: it reports
+# the MT6637 A-die as 0x6635 "for APP compatible". Band (87.5-108 MHz, 100 kHz)
+# and thresholds keep the library defaults, matching fm_cust.cfg. Antenna is the
+# headset cable; there is no short-antenna support.
+PRODUCT_PACKAGES += \
+    RevampedFMRadio
+
+PRODUCT_SYSTEM_EXT_PROPERTIES += \
+    ro.fm.chip=0x6635
+
 # ThermoVue Pro for the built-in Tiny2-C thermal camera (thermovue/; 64-bit repack of
 # the stock app, replaces M170infisens). ArmorParts powers the camera off if it dies.
 PRODUCT_PACKAGES += \
@@ -215,6 +229,9 @@ PRODUCT_PACKAGES += \
 ifneq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_SHIPPING_API_LEVEL := 35
 endif
+
+# Disabled-default NFC Lab app/profile; normal NFC and firmware stay unchanged.
+$(call inherit-product, $(DEVICE_PATH)/nfc-lab/nfc-lab.mk)
 
 # Proprietary
 $(call inherit-product, vendor/ulefone/gq5012bf1/gq5012bf1-vendor.mk)

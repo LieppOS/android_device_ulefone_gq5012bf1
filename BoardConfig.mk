@@ -35,8 +35,8 @@ TARGET_NO_RADIOIMAGE := true
 # and the recovery ramdisk staging rsync fails because modules (health HAL
 # vintf manifest, vendor selinux contexts) already installed real files into
 # $(TARGET_RECOVERY_ROOT_OUT)/vendor/etc.
-# Only sets BOARD_USES_VENDORIMAGE; BUILDING_VENDOR_IMAGE stays off because
-# BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE is deliberately not defined.
+# BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE is set to erofs further down, so the full
+# product DOES build a vendor image (dumpvars: BUILDING_VENDOR_IMAGE=true).
 TARGET_COPY_OUT_VENDOR := vendor
 
 # -------------------------------------------------
@@ -269,9 +269,14 @@ BOARD_AVB_VBMETA_VENDOR_ROLLBACK_INDEX := 0
 # by the generated extract-utils modules.
 # -------------------------------------------------
 
+# android.hardware.cas is intentionally NOT merged here. base_vendor.mk installs
+# the com.android.hardware.cas APEX, which carries both the service and its own
+# IMediaCasService/default declaration; the built vendor image has no separate
+# vendor CAS binary. Merging the stock fragment as well declared the same
+# instance twice and failed check_vintf_compatible. The stock fragment stays in
+# vintf/ as evidence only.
 DEVICE_MANIFEST_FILE := \
     $(DEVICE_PATH)/vintf/manifest.xml \
-    $(DEVICE_PATH)/vintf/android.hardware.cas-service.xml \
     $(DEVICE_PATH)/vintf/fingerprint-example.xml \
     $(DEVICE_PATH)/vintf/gnss-default.xml
 ODM_MANIFEST_FILES := $(DEVICE_PATH)/vintf/manifest_dsds.xml

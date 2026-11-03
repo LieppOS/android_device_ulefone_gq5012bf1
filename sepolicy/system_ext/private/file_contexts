@@ -1,0 +1,3 @@
+# NFC Mainline NfcInjector stores its private state in /data/nfc.
+# Use the existing platform type/allow rules; do not grant nfc system_data_file access.
+/data/nfc(/.*)?    u:object_r:nfc_data_file:s0

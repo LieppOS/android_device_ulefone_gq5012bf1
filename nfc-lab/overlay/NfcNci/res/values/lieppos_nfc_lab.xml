@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Source/build opt-in only after full platform review. Never enabled by diagnostics. -->
+    <bool name="lieppos_nfc_lab_type4_enabled">false</bool>
+</resources>

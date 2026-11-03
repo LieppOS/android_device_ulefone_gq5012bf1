@@ -1,0 +1,42 @@
+//
+// MediaTek FM JNI for RevampedFMRadio: talks to /dev/fm (FM_IOCTL_*) directly.
+// Chip/band configuration is property based (custom.cpp, ro.fm.*); the
+// GQ5012BF1 values are set in device.mk.
+//
+
+cc_library_shared {
+    name: "libmtkfmjni",
+
+    srcs: [
+        "fmr_core.cpp",
+        "fmr_err.cpp",
+        "libfm_jni.cpp",
+        "common.cpp",
+        "custom.cpp",
+    ],
+
+    header_libs: [
+        "jni_headers",
+        "libutils_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+        "-Wno-unused-but-set-variable",
+        "-Wno-format",
+        "-Wno-sometimes-uninitialized",
+        "-Wno-unused-label",
+    ],
+
+    system_ext_specific: true,
+}
