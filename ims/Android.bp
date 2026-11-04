@@ -13,6 +13,9 @@ android_app_import {
     name: "MtkImsServiceGq5012bf1",
     apk: "prebuilt/ImsService.apk",
     presigned: true,
+    // Already platform-signed (v2), zip-aligned, dex stored uncompressed by
+    // stub/build-imsservice.sh; the build must not repack it.
+    preprocessed: true,
     privileged: true,
     system_ext_specific: true,
     dex_preopt: {
