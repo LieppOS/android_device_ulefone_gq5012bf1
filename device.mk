@@ -153,6 +153,14 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/displayconfig/display_id_4627039422300187648.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/displayconfig/display_id_4627039422300187648.xml
 
+# First-stage mount: the stock fstabs in the vendor ramdisk (vendor_boot), as
+# on the stock and current slot-B vendor_boot (content-identical to the copies
+# in /vendor/etc). Without them the vendor ramdisk was empty and the build
+# failed listing out/.../vendor_ramdisk.
+PRODUCT_COPY_FILES += \
+    vendor/ulefone/gq5012bf1/proprietary/vendor/etc/fstab.mt6878:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.mt6878 \
+    vendor/ulefone/gq5012bf1/proprietary/vendor/etc/fstab.emmc:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.emmc
+
 # Face
 # Android 17 ships the example face service only inside the virtual-face APEX
 # and marks it installable: false. The stock vendor partition retains the
