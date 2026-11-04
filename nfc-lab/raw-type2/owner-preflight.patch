@@ -1,0 +1,219 @@
+--- a/NfcNci/nci/jni/rawt2/OwnerCore.h
++++ b/NfcNci/nci/jni/rawt2/OwnerCore.h
+@@ -267,11 +267,25 @@
+   Owner& operator=(const Owner&) = delete;
+   // Actor/executor only. Authorization is a separate Java/Binder boundary.
+   bool start(uint64_t now, uint64_t lease) {
+-    if (phase_ != Observing || used_ || cancelled_ || mailbox.overflow() ||
+-        lease == 0 || lease > 3000 || journal_.fault || !journal_.empty() ||
+-        journal_.lastDiscovery.empty() || !journal_.discoveryOn ||
+-        hostExclusive_ || !hostDiscoveryOn_ || !d_.healthy() || !d_.gate())
+-      return false;
++    // Preserve the original short-circuit order and all safety predicates.
++    // A refusal is diagnostic only: never acquire a gate, request a snapshot,
++    // alter controller state or replace an existing restoration failure.
++    startRefusal_.clear();
++    if (phase_ != Observing) return rejectStart("preflight-phase-not-observing");
++    if (used_) return rejectStart("preflight-already-used");
++    if (cancelled_) return rejectStart("preflight-cancelled");
++    if (mailbox.overflow()) return rejectStart("preflight-mailbox-overflow");
++    if (lease == 0) return rejectStart("preflight-lease-zero");
++    if (lease > 3000) return rejectStart("preflight-lease-too-long");
++    if (journal_.fault) return rejectStart("preflight-journal-fault");
++    if (!journal_.empty()) return rejectStart("preflight-command-pending");
++    if (journal_.lastDiscovery.empty())
++      return rejectStart("preflight-no-discover-command");
++    if (!journal_.discoveryOn) return rejectStart("preflight-discovery-off");
++    if (hostExclusive_) return rejectStart("preflight-host-exclusive");
++    if (!hostDiscoveryOn_) return rejectStart("preflight-host-discovery-off");
++    if (!d_.healthy()) return rejectStart("preflight-driver-unhealthy");
++    if (!d_.gate()) return rejectStart("preflight-admission-busy");
+     gated_ = true;
+     used_ = true;
+     lease_ = lease;
+@@ -354,6 +368,7 @@
+   }
+   Phase phase() const { return phase_; }
+   const std::string& reason() const { return reason_; }
++  const std::string& startRefusal() const { return startRefusal_; }
+   unsigned reads() const { return session_.queued_reads(); }
+   bool ready() const {
+     return phase_ == Running && verifiedRaw_ && !cancelled_ &&
+@@ -390,6 +405,16 @@
+   Mailbox mailbox;
+
+  private:
++  bool rejectStart(const char* why) {
++    startRefusal_ = why;
++    record("PREFLIGHT_REFUSED " + startRefusal_ +
++           " discovery_seen=" + std::to_string(!journal_.lastDiscovery.empty()) +
++           " discovery_on=" + std::to_string(journal_.discoveryOn) +
++           " pending=" + std::to_string(!journal_.empty()) +
++           " host_exclusive=" + std::to_string(hostExclusive_) +
++           " host_discovery_on=" + std::to_string(hostDiscoveryOn_));
++    return false;
++  }
+   bool capture_and_gate(Snapshot& s) override {
+     if (phase_ != BaselineRouting || !hostDh_ || !hostIdle_ ||
+         !baselineRoute_.dhA() || !d_.healthy() || service_.empty())
+@@ -802,7 +827,7 @@
+   Routing baselineRoute_, restoredRoute_;
+   Phase phase_ = Observing;
+   Bytes service_, discovery_, native_, nativeUid_;
+-  std::string reason_;
++  std::string reason_, startRefusal_;
+   std::deque<std::string> audit_;
+   uint64_t now_ = 0, deadline_ = 0, lease_ = 0, exclusiveAfterSerial_ = 0;
+   uint64_t auditSequence_ = 0;
+--- a/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
++++ b/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
+@@ -143,9 +143,21 @@
+       owner.poll(nowMs());
+       if (start && !owner.start(nowMs(), ms)) {
+         std::lock_guard<std::mutex> l(mutex);
+-        status = "refused:" + owner.reason();
++        // Core identifies the rejecting predicate. These flags are additional
++        // observations AFTER that decision, not an atomic historical snapshot.
++        status = "refused:" + owner.startRefusal() +
++                 ";owner_error=" + owner.reason() +
++                 ";observed_enabled=" + std::to_string(enabled.load()) +
++                 ";observed_nci2=" + std::to_string(nci2.load()) +
++                 ";observed_activated=" + std::to_string(activated.load()) +
++                 ";observed_unhealthy=" + std::to_string(unhealthy.load()) +
++                 ";observed_conflict=" +
++                 std::to_string(admission().conflict()) + "\n" + owner.audit();
+         continue;
+       }
++      // Still drain incoming evidence, but normal traffic must not overwrite a
++      // terminal preflight refusal with a misleading observing/empty status.
++      if (!owner.startRefusal().empty()) continue;
+       owner.poll(nowMs());
+       {
+         std::lock_guard<std::mutex> l(mutex);
+--- a/NfcNci/rawt2_tests/owner_test.cc
++++ b/NfcNci/rawt2_tests/owner_test.cc
+@@ -50,8 +50,10 @@
+ struct IO final : Driver {
+   bool held = false, conflicted = false;
+   unsigned gets = 0, routes = 0, sets = 0, starts = 0;
++  unsigned gateCalls = 0, healthyCalls = 0, serviceRequests = 0;
+   uint8_t epoch = 3;
+   bool gate() override {
++    ++gateCalls;
+     if (held) return false;
+     held = true;
+     return true;
+@@ -61,8 +63,9 @@
+     held = false;
+     return true;
+   }
+-  bool healthy() override { return !conflicted; }
++  bool healthy() override { ++healthyCalls; return !conflicted; }
+   bool requestServiceState(uint64_t nonce) override {
++    ++serviceRequests;
+     requestedNonce = nonce;
+     return true;
+   }
+@@ -238,7 +241,85 @@
+ int main(int argc, char** argv) {
+   assert(argc == 2);
+   std::string test = argv[1];
+-  if (test == "mailbox-race") {
++  if (test.rfind("preflight-", 0) == 0) {
++    Harness h;
++    uint64_t lease = 500;
++    std::string expected = test;
++    if (test != "preflight-no-discover-command" &&
++        test != "preflight-diagnostic-survives-traffic") h.command(1, 3, h.discovery);
++    if (test == "preflight-phase-not-observing") {
++      assert(h.owner.start(h.now, lease));
++    } else if (test == "preflight-cancelled") {
++      h.owner.cancel(); h.pump();
++    } else if (test == "preflight-mailbox-overflow") {
++      for (unsigned i = 0; i < 65; ++i) h.owner.mailbox.put(Input{Input::NormalStop});
++    } else if (test == "preflight-lease-zero") {
++      lease = 0;
++    } else if (test == "preflight-lease-too-long") {
++      lease = 3001;
++    } else if (test == "preflight-journal-fault") {
++      h.wire(false, packet(0x40, 3, {0})); // unmatched control response
++    } else if (test == "preflight-command-pending") {
++      h.wire(true, packet(0x20, 3, {0}));
++    } else if (test == "preflight-discovery-off") {
++      h.command(1, 6, {0});
++    } else if (test == "preflight-host-exclusive" ||
++               test == "preflight-host-discovery-off") {
++      auto b = packet(0x61, 7, {0});
++      h.owner.wire(false, b.data(), b.size(), true, true,
++                   test == "preflight-host-exclusive",
++                   test != "preflight-host-discovery-off");
++      h.pump();
++    } else if (test == "preflight-driver-unhealthy") {
++      h.io.conflicted = true;
++    } else if (test == "preflight-admission-busy") {
++      h.io.held = true;
++    } else if (test == "preflight-diagnostic-survives-traffic") {
++      expected = "preflight-no-discover-command";
++    } else if (test == "preflight-priority") {
++      lease = 0; h.io.conflicted = true; h.io.held = true;
++      expected = "preflight-lease-zero";
++    } else if (test == "preflight-existing-error-preserved") {
++      h.running(); h.owner.shutdown(); h.pump();
++      assert(!h.owner.reason().empty());
++      expected = "preflight-phase-not-observing";
++    } else if (test == "preflight-diagnostic-cleared-on-accept") {
++      assert(!h.owner.start(h.now, 0));
++      assert(h.owner.startRefusal() == "preflight-lease-zero");
++      assert(h.owner.start(h.now, lease));
++      assert(h.owner.startRefusal().empty());
++      assert(h.owner.reason().empty());
++      assert(h.io.gateCalls == 1 && h.io.serviceRequests == 1);
++      std::cout << "PASS diagnostic reset on accepted Core start; NOT runtime retry permission\n";
++      return 0;
++    } else {
++      assert(test == "preflight-no-discover-command");
++    }
++    const auto phase = h.owner.phase();
++    const auto reason = h.owner.reason();
++    const bool held = h.io.held, gated = h.owner.gated();
++    const unsigned gates = h.io.gateCalls, health = h.io.healthyCalls;
++    const std::vector<unsigned> operations{stops, exclusive, releases, h.io.gets,
++        h.io.routes, h.io.sets, h.io.starts, h.io.serviceRequests,
++        h.io.nativeSnapshots, h.io.nativeRestores};
++    assert(!h.owner.start(h.now, lease));
++    assert(h.owner.startRefusal() == expected);
++    assert(h.owner.audit().find("PREFLIGHT_REFUSED " + expected) != std::string::npos);
++    assert(h.owner.phase() == phase && h.owner.reason() == reason);
++    assert(h.io.held == held && h.owner.gated() == gated);
++    assert(operations == std::vector<unsigned>({stops, exclusive, releases, h.io.gets,
++        h.io.routes, h.io.sets, h.io.starts, h.io.serviceRequests,
++        h.io.nativeSnapshots, h.io.nativeRestores}));
++    assert(h.io.gateCalls == gates + (test == "preflight-admission-busy" ? 1 : 0));
++    assert(h.io.healthyCalls == health +
++           ((test == "preflight-driver-unhealthy" || test == "preflight-admission-busy") ? 1 : 0));
++    if (test == "preflight-diagnostic-survives-traffic") {
++      h.command(1, 3, h.discovery); // later ordinary evidence is still drained
++      assert(h.owner.startRefusal() == expected);
++      assert(!h.owner.ready() && !h.owner.gated());
++      assert(h.io.gateCalls == 0 && h.io.serviceRequests == 0);
++    }
++  } else if (test == "mailbox-race") {
+     Mailbox q;
+     std::vector<std::thread> producers;
+     for (int t = 0; t < 4; ++t)
+--- a/NfcNci/rawt2_tests/run_tests.py
++++ b/NfcNci/rawt2_tests/run_tests.py
+@@ -12,6 +12,13 @@
+        'native-baseline-failure','native-baseline-timeout','native-restore-mismatch',
+        'native-restore-timeout','no-fresh-discover','chosen-uid-readback','unexpected-uid-policy-write','changed-uid-readback']
+
++PREFLIGHT_CASES=['phase-not-observing','cancelled','mailbox-overflow','lease-zero',
++                 'lease-too-long','journal-fault','command-pending','no-discover-command',
++                 'discovery-off','host-exclusive','host-discovery-off','driver-unhealthy',
++                 'admission-busy','priority','existing-error-preserved',
++                 'diagnostic-cleared-on-accept','diagnostic-survives-traffic']
++CASES += ['preflight-'+case for case in PREFLIGHT_CASES]
++
+ NATIVE_CASES=['restore','preserve-raw-baseline','immutable-change','callback-change',
+               'queued-command','pending-response','queued-data','exclusive-present',
+               'invalid-cache','wrong-token','duplicate-capture','invalid-input',

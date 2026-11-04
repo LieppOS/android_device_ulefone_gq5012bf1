@@ -1,4 +1,4 @@
-# Raw Type2 owner — ordered test-evidence follow-up
+# Raw Type2 owner — ordered evidence and preflight-diagnostics follow-ups
 
 `owner-trace.patch` applies to the actual NFC module at owner commit
 `b69857f13212d403a2db9526c58ca83d97cd7844`, not clean AOSP upstream.
@@ -26,6 +26,36 @@ workspace NUMA binding in a private host mount namespace with actual canonical
 product/vendor inputs. This is not a live-process injection or a deployment
 method. Full build/ABI/signing and hardware-readiness evidence are in research
 `hardware/nfc/st21-owner-build-qualification/`.
+
+## Ordered preflight diagnostics
+
+Apply `owner-preflight.patch` AFTER `owner-trace.patch`, at the same exact owner
+base above. Before/after file hashes and patch identity are recorded in
+`owner-preflight-provenance.json`. Never edit an old recovery worktree or reuse
+a dirty source checkout as the patch base.
+
+The diagnostic-only follow-up preserves ALL14 start predicates and their original
+short-circuit order. A rejected start now has a named first-failing predicate,
+one bounded numbered `PREFLIGHT_REFUSED` audit record and observation-only driver
+flags. Existing restoration-error text stays separate and is not overwritten.
+Ordinary later traffic is still consumed, but cannot replace the terminal refusal
+with an apparently idle status. This does NOT enable retry or clear one-shot state.
+No permission, lease, NCI command/configuration, routing, UID, RF model or
+restoration check is relaxed.
+
+The exact two-patch replay from pinned owner source passes68 ASan/UBSan host tests,
+including17 preflight cases: refusal priority, no controller/snapshot side effects,
+no gate acquisition before earlier checks pass, cancellation/overflow, pending or
+faulted journal, missing/stopped discovery, host context, health/admission refusal,
+retained restoration error and diagnostic persistence. These use actual owner
+code/selected headers and simulated controller boundaries; they are NOT RF tests.
+Nine additional restoration/audit boundary regressions and11 host collector tests
+also pass. The full private Android JNI/APEX + sepolicy-neverallows build PASSED;
+actual diagnostic370400002 payload/profile/ARM64/dependencies/outer signature/AVB
+and matching-cert signed v2 client were checked offline. This is NOT device or RF
+qualification. The exact hardware predicate that caused the earlier empty refusal
+remains UNKNOWN until a separately approved diagnostic deployment. Research report:
+`hardware/nfc/st21-owner-build-qualification/PREFLIGHT-DIAGNOSTICS.md`.
 
 No change here enables the experiment or authorizes installing, staging an APEX,
 flashing the reader, changing phone routing/labels, or restarting NFC. Offline

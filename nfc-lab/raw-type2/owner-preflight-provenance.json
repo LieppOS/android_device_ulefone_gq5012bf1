@@ -1,0 +1,33 @@
+{
+  "base_owner_commit": "b69857f13212d403a2db9526c58ca83d97cd7844",
+  "apply_after": "owner-trace.patch",
+  "source_before_sha256": {
+    "NfcNci/nci/jni/rawt2/OwnerCore.h": "fd9e1b2988b6d4cd9f1802eac27c510b144318c7aaeb6ed9aa57ecc94c2758a3",
+    "NfcNci/nci/jni/rawt2/AndroidOwner.cpp": "bc7912ee27d508d51b00a878afe474b34d057bde1ff2c37157938a5416f04a0f",
+    "NfcNci/rawt2_tests/owner_test.cc": "b440bac01be1af0b40b7f93c41ecc0f9a1cf9f14f0bd99688fb42d985fb765f1",
+    "NfcNci/rawt2_tests/run_tests.py": "a89d96c366a06c18e8636d52b02aa9b651a557a71d3ee4cc8428b0a48b0e194d"
+  },
+  "source_after_sha256": {
+    "NfcNci/nci/jni/rawt2/OwnerCore.h": "aa8f74b04157cbe5cc470f7feff3c34967fb66f14951122803b488e573eac6d5",
+    "NfcNci/nci/jni/rawt2/AndroidOwner.cpp": "b6bf210e25af4a4937c3402375a4d9430b648c280a5df2c20dbb2bd8833f8e13",
+    "NfcNci/rawt2_tests/owner_test.cc": "ee780eb9fedb5bb0ce3b8c635ad9ff34648dd4982edfc41397db2d3b88c38399",
+    "NfcNci/rawt2_tests/run_tests.py": "9ed4d3cf6c18e90c7f4b4d4ee095fdce4240d2cb32c7544682da078dc9bab3fa"
+  },
+  "patch_sha256": "c5e654b648f5fb3d21fc5233ab350a3c76f2e6c4556743b8bca31a9441e3120c",
+  "scope": "Diagnostic-only ordered guard split, numbered refusal audit, terminal refusal latch,17 host preflight tests; no guard/lease/route/config/UID/permission relaxation",
+  "hardware_verified": false,
+  "validation": {
+    "exact_ordered_patch_replay": "PASS",
+    "asan_ubsan_native_cases": 68,
+    "extra_restoration_audit_cases": 9,
+    "collector_cases": 11,
+    "full_Android_JNI_APEX_policy_build": "PASS",
+    "source_unchanged_during_build": true,
+    "actual_packaged_profile_and_diagnostics_checked": true,
+    "signature_and_AVB_trust_checked": true,
+    "candidate_version": 370400002,
+    "candidate_apex_sha256": "473d449fce8164cf9bee9097b8c313613ecf2307bfc82831f612c12de247b4f9",
+    "candidate_jni_sha256": "166b48df56fe13a333d9c3305e492ac6742ba94bb8cee424bc585b62d25720bc",
+    "installed": false
+  }
+}
