@@ -237,7 +237,10 @@ system_ext/priv-app/ImsService/oat/arm64/ImsService.odex;EXTRACT_ONLY
 # device application
 system_ext/priv-app/ImsService/oat/arm64/ImsService.vdex;EXTRACT_ONLY
 # device application
-system_ext/priv-app/Nfc_st/Nfc_st.apk
+# Not packaged: stock A15 ST NFC app duplicates com.android.nfc from the
+# NFC APEX, needs the absent com.st.android.nfc_extensions library, and its
+# privileged permissions are not allowlisted (system_server aborts at boot).
+system_ext/priv-app/Nfc_st/Nfc_st.apk;EXTRACT_ONLY
 # device application
 system_ext/priv-app/Nfc_st/oat/arm64/Nfc_st.odex;EXTRACT_ONLY
 # device application
