@@ -1,0 +1,43 @@
+{
+  "base_owner_commit": "b69857f13212d403a2db9526c58ca83d97cd7844",
+  "apply_after": [
+    "owner-trace.patch",
+    "owner-preflight.patch"
+  ],
+  "canonical_before_commit": "baae8d4",
+  "source_before_sha256": {
+    "NfcNci/nci/jni/rawt2/BootstrapCaps.h": null,
+    "NfcNci/nci/jni/rawt2/OwnerCore.h": "aa8f74b04157cbe5cc470f7feff3c34967fb66f14951122803b488e573eac6d5",
+    "NfcNci/nci/jni/rawt2/AndroidOwner.cpp": "b6bf210e25af4a4937c3402375a4d9430b648c280a5df2c20dbb2bd8833f8e13",
+    "NfcNci/nci/jni/NativeNfcManager.cpp": "abdec54a3fd50cfcff3cab2f00f034519d460c919f9e7d19b7e80505fb4d4376",
+    "NfcNci/rawt2_tests/owner_test.cc": "ee780eb9fedb5bb0ce3b8c635ad9ff34648dd4982edfc41397db2d3b88c38399",
+    "NfcNci/rawt2_tests/run_tests.py": "9ed4d3cf6c18e90c7f4b4d4ee095fdce4240d2cb32c7544682da078dc9bab3fa"
+  },
+  "source_after_sha256": {
+    "NfcNci/nci/jni/rawt2/BootstrapCaps.h": "9b8c8d77a2da1a740c916ca7ceb67748b34b7d2a4af319dd2fb3d5f2ec9a6ffd",
+    "NfcNci/nci/jni/rawt2/OwnerCore.h": "a30d4abe60e450a62d363865b4f9f06fb4d158739a203dd5a3a45cfbbaccfdd0",
+    "NfcNci/nci/jni/rawt2/AndroidOwner.cpp": "73b84c311dc4cee6de3d122f04a9448ea79146144981d3ab0d140a4be3ca635d",
+    "NfcNci/nci/jni/NativeNfcManager.cpp": "f2997b5cc20403fc066520e2fd20eb347008fe158a9c7cd2f2145a1241d23264",
+    "NfcNci/rawt2_tests/owner_test.cc": "3b08af4f489fabc474704cdd4c4b7edf0e6a7553f690e487b61502c8ef4d85a7",
+    "NfcNci/rawt2_tests/run_tests.py": "6ab4c7593b2db60c491d2fc76ad7b915a23ea619b044044ecd75045b2cfbacf8"
+  },
+  "patch_sha256": "b16f8252732bb1d50c1a425b985f333ce45a4dd3309b6fd94315ff308b865b15",
+  "captured_read_only_query": "2f0c0100",
+  "captured_legacy_syntax_error": "4f0c0105",
+  "old_production_Journal_first_fault_control_record": 27,
+  "captured_control_packets_replayed": 150,
+  "new_passive_replay_faults": 0,
+  "scope": "Exact optional-read bootstrap classification only, strict maintenance/no fault clear/no OK normalization; bounds-safe legacy callback and stale-cap reset; selected-stack READ_ROUTING command/RSP/NTF opcode2 instead of SET1; no routing/config/UID/lease/auth override.",
+  "host_cases": 88,
+  "extra_host_cases": 9,
+  "full_Android_build": "PASS, 503.6s, source unchanged; earlier unqualified attempt cancelled for routing protocol audit",
+  "actual_APEX_sha256": "7abaa44e9ba533c11dfef0c8bfeaa9492e3a36f72ba827621c9fa14c86a7fc00",
+  "actual_JNI_sha256": "7713bd62d344610458a38db19c97fa834880de9060e6221c2a380041725662d1",
+  "packaged_profile_ABI_dependencies_cert_AVB_checks": "PASS",
+  "hardware_bootstrap_guard_verified": true,
+  "live_next_failure": "native-baseline-unavailable before initial controller stop/config/routing; ready0, reader resume0",
+  "corrected_GET_ROUTING_executed_on_phone": false,
+  "new_fix_hardware_verified": false,
+  "routing_get_command": "210200",
+  "routing_constants_source": "selected nci_defs.h RF_SET_ROUTING=1 RF_GET_ROUTING=2"
+}

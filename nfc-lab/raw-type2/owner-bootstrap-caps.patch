@@ -1,0 +1,339 @@
+--- /dev/null
++++ b/NfcNci/nci/jni/rawt2/BootstrapCaps.h
+@@ -0,0 +1,19 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <cstddef>
++#include <cstdint>
++
++namespace lieppos::rawt2 {
++// Exact read-only Android GET_CAPS request and legacy syntax-error response
++// captured in this ST21's normal bootstrap. NCI constants: PROP=0x0f,
++// ANDROID=0x0c, GET_CAPS=0x00, STATUS_SYNTAX_ERROR=0x05.
++// No other vendor request/status/length is classified by these helpers.
++inline bool isReadOnlyAndroidCapsQuery(const uint8_t* b, size_t n) {
++  return b && n == 4 && b[0] == 0x2f && b[1] == 0x0c && b[2] == 1 &&
++         b[3] == 0;
++}
++inline bool isAndroidLegacySyntaxError(const uint8_t* b, size_t n) {
++  return b && n == 4 && b[0] == 0x4f && b[1] == 0x0c && b[2] == 1 &&
++         b[3] == 0x05;
++}
++}  // namespace lieppos::rawt2
+--- a/NfcNci/nci/jni/rawt2/OwnerCore.h
++++ b/NfcNci/nci/jni/rawt2/OwnerCore.h
+@@ -6,6 +6,8 @@
+ #include <mutex>
+ #include <optional>
+
++#include "BootstrapCaps.h"
++#include "nci_defs.h"
+ #include "nfa_port.hpp"
+
+ namespace lieppos::rawt2 {
+@@ -74,6 +76,10 @@
+ // NCI 2.x target profile: include fields normal restart can touch, not just LA.
+ // PF_RC(19) belongs to the NCI-1-only branch; the real driver refuses NCI 1.x.
+ inline const Bytes kIds{0x00, 0x30, 0x31, 0x32, 0x33, 0x38, 0x50, 0x80};
++// Use the selected stack's READ opcode, never RF_SET_LISTEN_MODE_ROUTING.
++inline const Bytes kGetRoutingCommand{
++    uint8_t((NCI_MT_CMD << NCI_MT_SHIFT) | NCI_GID_RF_MANAGE),
++    NCI_MSG_RF_GET_ROUTING, 0};
+ inline bool parseConfig(const Bytes& b, Config& out) {
+   if (b.size() < 2 || b[0] != 0) return false;
+   Config result;
+@@ -175,7 +181,7 @@
+     pending_.push_back(b);
+     return true;
+   }
+-  std::optional<Reply> rx(const Bytes& b) {
++  std::optional<Reply> rx(const Bytes& b, bool passiveBootstrap = false) {
+     if (!packet(b)) {
+       fault = true;
+       return {};
+@@ -198,9 +204,19 @@
+     pending_.pop_front();
+     Reply r{uint8_t(b[0] & 15), b[1], cmd, Bytes(b.begin() + 3, b.end()),
+             ++serial};
+-    if (r.payload.empty() || r.payload[0] != 0) fault = true;
++    // Android's optional, read-only GET_CAPS query is not a controller config
++    // transaction. This exact paired unsupported response was captured during
++    // normal ST21 bootstrap. Classify it ONLY in passive observation; never
++    // reinterpret it as success, clear an earlier fault, or allow it in a lease.
++    const bool unsupportedCaps = passiveBootstrap &&
++        isReadOnlyAndroidCapsQuery(cmd.data(), cmd.size()) &&
++        isAndroidLegacySyntaxError(b.data(), b.size());
++    if (unsupportedCaps) optionalCapsUnsupported = true;
++    if (r.payload.empty() || (r.payload[0] != 0 && !unsupportedCaps))
++      fault = true;
+     if (r.gid == 0 && r.oid == 2 && r.payload != Bytes({0, 0})) fault = true;
+-    if (r.gid == 1 && (r.oid == 1 || r.oid == 3 || r.oid == 6) &&
++    if (r.gid == 1 && (r.oid == 1 || r.oid == NCI_MSG_RF_GET_ROUTING ||
++                       r.oid == 3 || r.oid == 6) &&
+         r.payload != Bytes{0})
+       fault = true;
+     if (!fault && r.gid == 1 && r.oid == 3) {
+@@ -216,7 +232,7 @@
+     return b.size() >= 3 && b.size() == size_t(b[2]) + 3 && !(b[0] & 0x10);
+   }
+   bool empty() const { return pending_.empty(); }
+-  bool fault = false, discoveryOn = false;
++  bool fault = false, discoveryOn = false, optionalCapsUnsupported = false;
+   uint64_t serial = 0, discoverySerial = 0;
+   Bytes lastDiscovery;
+
+@@ -595,7 +611,13 @@
+       // NCI data packets are not control responses; chained RF data has its
+       // own PBF semantics. NFA_DATA_EVT is the validated raw command source.
+       if (!in.bytes.empty() && (in.bytes[0] & 0xe0) == 0) return;
+-      const auto reply = journal_.rx(in.bytes);
++      const bool capsWasUnsupported = journal_.optionalCapsUnsupported;
++      const bool passiveBootstrap = phase_ == Observing && !gated_ && !used_ &&
++                                    !cancelled_;
++      const auto reply = journal_.rx(in.bytes, passiveBootstrap);
++      if (!capsWasUnsupported && journal_.optionalCapsUnsupported) {
++        record("BOOTSTRAP_ANDROID_GET_CAPS_UNSUPPORTED");
++      }
+       if (journal_.fault) {
+         if (gated_) fail("controller-response-mismatch-or-rejection");
+         return;
+@@ -607,7 +629,8 @@
+         return;
+       }
+       if (reply) onReply(*reply);
+-      if (in.bytes.size() >= 3 && in.bytes[0] == 0x61 && in.bytes[1] == 1) {
++      if (in.bytes.size() >= 3 && in.bytes[0] == 0x61 &&
++          in.bytes[1] == NCI_MSG_RF_GET_ROUTING) {
+         Bytes payload(in.bytes.begin() + 3, in.bytes.end());
+         Routing* route = phase_ == BaselineRouting ? &baselineRoute_
+                          : phase_ == VerifyRouting ? &restoredRoute_
+@@ -787,9 +810,9 @@
+         if (!d_.getRouting()) fail("restore-get-routing-not-queued");
+       } else
+         fail("unexpected-config-response");
+-    } else if (r.gid == 1 && r.oid == 1) {
++    } else if (r.gid == 1 && r.oid == NCI_MSG_RF_GET_ROUTING) {
+       if ((phase_ != BaselineRouting && phase_ != VerifyRouting) ||
+-          r.payload != Bytes{0})
++          r.command != kGetRoutingCommand || r.payload != Bytes{0})
+         fail("unexpected-routing-response");
+       else
+         routeRsp_ = true;
+--- a/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
++++ b/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
+@@ -71,8 +71,9 @@
+     return NFA_GetConfig(ids.size(), ids.data()) == NFA_STATUS_OK;
+   }
+   bool getRouting() override {
+-    uint8_t cmd[]{0x21, 0x01, 0x00};
+-    return NFA_SendRawVsCommand(sizeof(cmd), cmd, rawCallback) == NFA_STATUS_OK;
++    Bytes cmd = kGetRoutingCommand;
++    return NFA_SendRawVsCommand(uint8_t(cmd.size()), cmd.data(), rawCallback) ==
++           NFA_STATUS_OK;
+   }
+   bool setConfig(uint8_t id, const Bytes& data) override {
+     Bytes copy = data;
+--- a/NfcNci/nci/jni/NativeNfcManager.cpp
++++ b/NfcNci/nci/jni/NativeNfcManager.cpp
+@@ -16,6 +16,7 @@
+
+ #include "rawt2/JniAdmission.h"
+ #include "rawt2/AndroidOwner.h"
++#include "rawt2/BootstrapCaps.h"
+ #include <android-base/logging.h>
+ #include <android-base/stringprintf.h>
+ #include <cutils/properties.h>
+@@ -1248,9 +1249,32 @@
+ void static nfaVSCallback(uint8_t event, uint16_t param_len, uint8_t* p_param) {
+   switch (event & NCI_OID_MASK) {
+     case NCI_MSG_PROP_ANDROID: {
++      // A legacy controller can reject the optional Android query with a
++      // one-byte NCI status, not Android's sub-opcode/status envelope. In the
++      // captured 4F0C0105 reply, 05 is SYNTAX_ERROR, NOT SET_OBSERVER_TECH.
++      // Recognize it before dispatch so no nonexistent p_param[4] is read.
++      if (lieppos::rawt2::isAndroidLegacySyntaxError(p_param, param_len)) {
++        gVSCmdStatus = NFC_STATUS_SYNTAX_ERROR;
++        SyncEventGuard guard(gNfaVsCommand);
++        gNfaVsCommand.notifyOne();
++        return;
++      }
++      if (!p_param || param_len < 4 ||
++          (((p_param[0] & 0xe0) == 0x40) && param_len < 5)) {
++        gVSCmdStatus = NFA_STATUS_FAILED;
++        SyncEventGuard guard(gNfaVsCommand);
++        gNfaVsCommand.notifyOne();
++        return;
++      }
+       uint8_t android_sub_opcode = p_param[3];
+       switch (android_sub_opcode) {
+         case NCI_QUERY_ANDROID_PASSIVE_OBSERVE: {
++          if (param_len < 6) {
++            gVSCmdStatus = NFA_STATUS_FAILED;
++            SyncEventGuard guard(gNfaVsCommand);
++            gNfaVsCommand.notifyOne();
++            return;
++          }
+           gObserveModeEnabled = p_param[5];
+           LOG(INFO) << StringPrintf("%s: Query Observe mode state is %s",
+                                     __func__,
+@@ -3397,6 +3421,9 @@
+                    NCI_ANDROID_GET_CAPS};
+   SyncEventGuard guard(gNfaVsCommand);
+
++  // Never return capabilities left over from an earlier successful query.
++  gCaps.clear();
++  gVSCmdStatus = NFA_STATUS_FAILED;
+   tNFA_STATUS status = NFA_SendRawVsCommand(sizeof(cmd), cmd, nfaVSCallback);
+   if (status == NFA_STATUS_OK) {
+     if (!gNfaVsCommand.wait(1000)) {
+--- a/NfcNci/rawt2_tests/owner_test.cc
++++ b/NfcNci/rawt2_tests/owner_test.cc
+@@ -141,9 +141,9 @@
+     command(0, 3, ids, p);
+   }
+   void route(bool dh = true) {
+-    command(1, 1, {});
++    command(1, NCI_MSG_RF_GET_ROUTING, {});
+     wire(false,
+-         packet(0x61, 1,
++         packet(0x61, NCI_MSG_RF_GET_ROUTING,
+                 {0, 2, 0, 3, uint8_t(dh ? 0 : 0x81), 1, 0, 1, 3, 0x81, 1, 4}),
+          dh);
+   }
+@@ -184,7 +184,7 @@
+     if (nonce == 1 && owner.phase() == Owner::BaselineNative)
+       nativeReply(false);
+   }
+-  void prepare(bool dh = true) {
++  void prepareRouting() {
+     command(1, 3, discovery);
+     assert(owner.start(now, 500));
+     publish(1);
+@@ -193,6 +193,10 @@
+     normalStop();
+     assert(io.gets == 1);
+     config(baseline);
++    assert(owner.phase() == Owner::BaselineRouting);
++  }
++  void prepare(bool dh = true) {
++    prepareRouting();
+     route(dh);
+   }
+   void running() {
+@@ -241,7 +245,96 @@
+ int main(int argc, char** argv) {
+   assert(argc == 2);
+   std::string test = argv[1];
+-  if (test.rfind("preflight-", 0) == 0) {
++  if (test.rfind("routing-wire-", 0) == 0) {
++    assert(NCI_MSG_RF_SET_ROUTING == 1 && NCI_MSG_RF_GET_ROUTING == 2);
++    assert(kGetRoutingCommand == Bytes({0x21, 0x02, 0x00}));
++    assert(kGetRoutingCommand[1] != NCI_MSG_RF_SET_ROUTING);
++    if (test != "routing-wire-constants") {
++      Harness h; h.prepareRouting();
++      Bytes request = kGetRoutingCommand;
++      if (test == "routing-wire-wrong-command-payload") { request[2] = 1; request.push_back(0); }
++      h.wire(true, request);
++      if (test == "routing-wire-old-set-response") {
++        h.wire(false, packet(0x41, NCI_MSG_RF_SET_ROUTING, {0}));
++      } else if (test == "routing-wire-malformed-response") {
++        h.wire(false, packet(0x41, NCI_MSG_RF_GET_ROUTING, {0, 0}));
++      } else if (test == "routing-wire-wrong-command-payload") {
++        h.wire(false, packet(0x41, NCI_MSG_RF_GET_ROUTING, {0}));
++      } else if (test == "routing-wire-old-set-notification") {
++        h.wire(false, packet(0x41, NCI_MSG_RF_GET_ROUTING, {0}));
++        h.wire(false, packet(0x61, NCI_MSG_RF_SET_ROUTING, {0, 1, 0, 3, 0, 1, 0}));
++        assert(h.owner.phase() == Owner::BaselineRouting && !h.owner.ready());
++        h.owner.poll(h.now + 2000);
++      } else { assert(false); }
++      assert(h.owner.phase() == Owner::Failed && h.io.held && !h.owner.ready());
++      assert(exclusive == 0 && h.io.sets == 0);
++    }
++  } else if (test.rfind("bootstrap-caps-", 0) == 0) {
++    const Bytes query{0x2f, 0x0c, 1, 0};
++    const Bytes unsupported{0x4f, 0x0c, 1, 0x05};
++    if (test == "bootstrap-caps-helper-bounds") {
++      assert(!isAndroidLegacySyntaxError(nullptr, 0));
++      assert(!isAndroidLegacySyntaxError(nullptr, 4));
++      assert(!isReadOnlyAndroidCapsQuery(nullptr, 4));
++      for (size_t size = 0; size < unsupported.size(); ++size) {
++        Bytes shortReply(unsupported.begin(), unsupported.begin() + size);
++        assert(!isAndroidLegacySyntaxError(shortReply.data(), shortReply.size()));
++        Bytes shortQuery(query.begin(), query.begin() + size);
++        assert(!isReadOnlyAndroidCapsQuery(shortQuery.data(), shortQuery.size()));
++      }
++      assert(isAndroidLegacySyntaxError(unsupported.data(), unsupported.size()));
++      assert(isReadOnlyAndroidCapsQuery(query.data(), query.size()));
++      Bytes notification{0x6f, 0x0c, 1, 0x05};
++      assert(!isAndroidLegacySyntaxError(notification.data(), notification.size()));
++      Bytes androidEnvelope{0x4f, 0x0c, 2, 0, 0};
++      assert(!isAndroidLegacySyntaxError(androidEnvelope.data(), androidEnvelope.size()));
++    } else if (test == "bootstrap-caps-owner-bootstrap") {
++      Harness h;
++      h.command(15, 0x0c, {0}, {0x05});
++      assert(h.owner.phase() == Owner::Observing && !h.owner.gated());
++      assert(h.io.gateCalls == 0 && h.io.serviceRequests == 0 && stops == 0);
++      assert(h.owner.audit().find("BOOTSTRAP_ANDROID_GET_CAPS_UNSUPPORTED") != std::string::npos);
++      h.running(); h.finish();
++      assert(h.owner.restored() && !h.io.held);
++    } else if (test == "bootstrap-caps-owner-lease") {
++      Harness h; h.running();
++      h.command(15, 0x0c, {0}, {0x05});
++      assert(h.owner.phase() == Owner::Failed && h.io.held && !h.owner.ready());
++      assert(h.owner.reason() == "controller-response-mismatch-or-rejection");
++    } else if (test == "bootstrap-caps-owner-cancelled") {
++      Harness h; h.owner.cancel(); h.pump();
++      h.command(15, 0x0c, {0}, {0x05});
++      assert(!h.owner.start(h.now, 500));
++      assert(h.owner.startRefusal() == "preflight-cancelled");
++      assert(h.owner.audit().find("BOOTSTRAP_ANDROID_GET_CAPS_UNSUPPORTED") == std::string::npos);
++    } else {
++      Journal j; Bytes command = query, response = unsupported;
++      bool passive = true;
++      if (test == "bootstrap-caps-default-strict") passive = false;
++      else if (test == "bootstrap-caps-wrong-subcommand") command.back() = 1;
++      else if (test == "bootstrap-caps-wrong-oid") command[1] = response[1] = 0x0d;
++      else if (test == "bootstrap-caps-wrong-status") response.back() = 3;
++      else if (test == "bootstrap-caps-malformed-response") { response[2] = 2; response.push_back(0); }
++      else if (test == "bootstrap-caps-mismatched") command[1] = 0x0d;
++      else if (test == "bootstrap-caps-standard-error") { command = {0x20, 3, 1, 0}; response = {0x40, 3, 1, 0x05}; }
++      else if (test == "bootstrap-caps-prior-fault") { j.rx({0x40, 3, 1, 0}); assert(j.fault); }
++      else assert(test == "bootstrap-caps-passive" || test == "bootstrap-caps-duplicate" || test == "bootstrap-caps-unsolicited");
++      if (test != "bootstrap-caps-unsolicited") assert(j.tx(command));
++      auto reply = j.rx(response, passive);
++      if (test == "bootstrap-caps-passive" || test == "bootstrap-caps-duplicate") {
++        assert(reply && reply->payload == Bytes{0x05}); // NEVER normalized to OK
++        assert(!j.fault && j.empty() && j.optionalCapsUnsupported);
++        assert(j.lastDiscovery.empty() && !j.discoveryOn);
++        if (test == "bootstrap-caps-duplicate") {
++          j.rx(response, true); assert(j.fault);
++        } else {
++          assert(j.tx({0x21, 3, 3, 1, 0x80, 1}));
++          j.rx({0x41, 3, 1, 0}, true);
++          assert(!j.fault && j.discoveryOn && j.lastDiscovery == Bytes({1, 0x80, 1}));
++        }
++      } else assert(j.fault); // exception never clears an earlier fault
++    }
++  } else if (test.rfind("preflight-", 0) == 0) {
+     Harness h;
+     uint64_t lease = 500;
+     std::string expected = test;
+--- a/NfcNci/rawt2_tests/run_tests.py
++++ b/NfcNci/rawt2_tests/run_tests.py
+@@ -19,6 +19,16 @@
+                  'diagnostic-cleared-on-accept','diagnostic-survives-traffic']
+ CASES += ['preflight-'+case for case in PREFLIGHT_CASES]
+
++BOOTSTRAP_CAPS_CASES=['helper-bounds','passive','default-strict','wrong-subcommand','wrong-oid',
++                      'wrong-status','malformed-response','mismatched','standard-error',
++                      'prior-fault','duplicate','unsolicited','owner-bootstrap',
++                      'owner-lease','owner-cancelled']
++CASES += ['bootstrap-caps-'+case for case in BOOTSTRAP_CAPS_CASES]
++
++ROUTING_WIRE_CASES=['constants','old-set-response','old-set-notification',
++                    'malformed-response','wrong-command-payload']
++CASES += ['routing-wire-'+case for case in ROUTING_WIRE_CASES]
++
+ NATIVE_CASES=['restore','preserve-raw-baseline','immutable-change','callback-change',
+               'queued-command','pending-response','queued-data','exclusive-present',
+               'invalid-cache','wrong-token','duplicate-capture','invalid-input',

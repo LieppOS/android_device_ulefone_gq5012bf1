@@ -57,6 +57,49 @@ qualification. The exact hardware predicate that caused the earlier empty refusa
 remains UNKNOWN until a separately approved diagnostic deployment. Research report:
 `hardware/nfc/st21-owner-build-qualification/PREFLIGHT-DIAGNOSTICS.md`.
 
+## Captured bootstrap interoperability and routing-read correction
+
+Apply `owner-bootstrap-caps.patch` THIRD, after trace and preflight patches on the
+same pinned base. `owner-bootstrap-caps-provenance.json` records all six old/new
+file hashes (the new helper is absent before application).
+
+A separately approved diagnostic run identified preflight-journal-fault. Decoding
+its saved NFCSNOOP and replaying150 actual control packets through production
+Journal reproduces the first poison at record27: paired read-only Android GET_CAPS
+`2F 0C 01 00` -> legacy `4F 0C 01 05` (SYNTAX_ERROR). The correction classifies
+ONLY that exact paired exchange during passive, unused, uncancelled observation.
+It does not normalize the status to OK, clear any existing fault, invent discovery
+or permit that response during maintenance. Default Journal mode stays strict.
+The full captured replay then ends with fault0/pending0 and real discovery seen/on.
+
+The same four-byte response was misread by the ordinary vendor callback as Android
+sub-opcode5 followed by a nonexistent status byte. Exact-frame/bounds checks now
+handle it as an error before sub-opcode dispatch; a fresh capability query clears
+stale capabilities and status rather than returning invented support.
+
+Independent protocol review also caught the old routing-read request using SET
+opcode1. The selected nci_defs.h defines GET_ROUTING=2. Driver request, matched
+response/notification and tests now use GET; the shared command is explicitly
+checked against `21 02 00`. No SET-routing command is added or issued by this fix.
+The earlier hardware attempts never reached this stage. Do not reuse the old
+simulated opcode1 fixtures as evidence of a real controller response.
+
+Exact three-patch replay/hashes/actual reverse-forward checks PASS.88 ASan/UBSan
+native cases plus9 restoration/audit regressions PASS, including15 bootstrap cases
+and5 independent routing-wire cases. Maintenance rejection, bad shape/status,
+wrong sub-command/OID, unsolicited/mismatched/duplicate response and prior-fault
+retention are covered. No RF result follows from these host tests. The first
+unqualified build attempt was stopped for this routing safety audit; the corrected
+full Android370400003 build PASSED in503.6s with source unchanged. Actual packaged
+flags, JNI/ARM64/dependencies, outer certificate, trusted AVB payload and matching
+v2-client signer checks PASS. The corrected bootstrap gate also passed on the
+phone: BOOTSTRAP_ANDROID_GET_CAPS_UNSUPPORTED was recorded, followed by service
+and native snapshot events. The session then stopped at native-baseline-unavailable
+before controller stop/config/routing; no ready or reader resume. Factory NFC was
+restored with original hashes and healthy services. GET_ROUTING remains offline
+validated, not controller/RF verified. See the research bootstrap/native retest;
+hardware RF remains UNKNOWN.
+
 No change here enables the experiment or authorizes installing, staging an APEX,
 flashing the reader, changing phone routing/labels, or restarting NFC. Offline
 passing tests and signed packages are not Type2 RF verification.
