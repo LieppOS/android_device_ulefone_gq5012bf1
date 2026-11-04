@@ -1,0 +1,40 @@
+{
+  "apply_after": [
+    "owner-trace.patch",
+    "owner-preflight.patch",
+    "owner-bootstrap-caps.patch"
+  ],
+  "before_sha256": {
+    "libnfc-nci/src/include/LiepposRawT2Native.h": "963123779d1b66531178bd2b89a573105290b7245b3c5e493e4c6cbd053f950c",
+    "libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc": "155a76cc6706304fb4cb9bc725f9c75e027df895867830b45d7c16907bec6f75",
+    "NfcNci/nci/jni/rawt2/OwnerCore.h": "a30d4abe60e450a62d363865b4f9f06fb4d158739a203dd5a3a45cfbbaccfdd0",
+    "NfcNci/nci/jni/rawt2/AndroidOwner.cpp": "73b84c311dc4cee6de3d122f04a9448ea79146144981d3ab0d140a4be3ca635d",
+    "NfcNci/rawt2_tests/owner_test.cc": "3b08af4f489fabc474704cdd4c4b7edf0e6a7553f690e487b61502c8ef4d85a7",
+    "NfcNci/rawt2_tests/native_state_test.cc": "45e5196b438547fd8cce40b1b7492f0908a74b8a370619f9a5b989fb02800487",
+    "NfcNci/rawt2_tests/run_tests.py": "6ab4c7593b2db60c491d2fc76ad7b915a23ea619b044044ecd75045b2cfbacf8"
+  },
+  "after_sha256": {
+    "libnfc-nci/src/include/LiepposRawT2Native.h": "7bb7de3e36b934396559ce2597374a39ffa0612af7b2d2c407232576b12d04ea",
+    "libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc": "80590a597abcd22a5ce7702685c559cd3ab0c36a9a6c1cfb571a04ecd788995e",
+    "NfcNci/nci/jni/rawt2/OwnerCore.h": "3c3c1f2f7eea74f4dda2a1305efa6ceafbbba269fb6ab193e8fcaab7f3c15472",
+    "NfcNci/nci/jni/rawt2/AndroidOwner.cpp": "a57528f1e4017d8718f3a2f107c7bdbcfdb59d766415ae521ff91adb66f29dee",
+    "NfcNci/rawt2_tests/owner_test.cc": "213c990a921988e1f1aee68a1872d301cc23f79bfbe1ec6689dcf6218a03ae94",
+    "NfcNci/rawt2_tests/native_state_test.cc": "42694f2f1953396bfdc334255fb503ced99c8ff27ad6609087a66cfb381e9603",
+    "NfcNci/rawt2_tests/run_tests.py": "2892da3b44431683cf0f530aee67c60b5f168eb49bf65c749d0f9d21a0b9456b"
+  },
+  "patch_sha256": "3240981877f7beab28fb2a422dfe6b94dd38a927108662941bd6718f0c708552",
+  "host_cases": 115,
+  "extra_cases": 9,
+  "stable_predicate_combinations": 16384,
+  "eligibility_equivalent": true,
+  "full_Android_build": "PASS",
+  "package_qualification": "PASS",
+  "version": 370400004,
+  "installed": false,
+  "physical_native_subpredicate": "ControllerNotOpen: actual4=normal discovery IDLE, incorrect required5=activated OPEN. Correct in subsequent owner-native-idle.patch.",
+  "scope": "Metadata only; no guard, one-shot, authorization, native restore or NCI change. Apply subsequent IDLE correction before further reviewed tests.",
+  "base_owner_commit": "b69857f13212d403a2db9526c58ca83d97cd7844",
+  "live_diagnostic_verified": true,
+  "actual_APEX_sha256": "3f955942283b82e261caa63c3efa6395e1075608f29b1b5ea678eb06b2fa115d",
+  "actual_JNI_sha256": "80e771023d7b8597daa49b304a0e9dc3e948f13ef79428e248cea9029e37a1fd"
+}

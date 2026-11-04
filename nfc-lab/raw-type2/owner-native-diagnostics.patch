@@ -1,0 +1,457 @@
+--- a/libnfc-nci/src/include/LiepposRawT2Native.h
++++ b/libnfc-nci/src/include/LiepposRawT2Native.h
+@@ -6,9 +6,31 @@
+ namespace lieppos::rawt2 {
+ // Internal NFC-owner API, not Binder/vendor NCI or a second controller opener.
+ // Replies are transient views: consumers MUST copy inside the callback.
++enum NativeRejection : uint32_t {
++  WrongNciVersion = 1u << 0, DiscoveryDisabled = 1u << 1,
++  ExclusiveActive = 1u << 2, ControllerNotOpen = 1u << 3,
++  DiscoveryStateNotStable = 1u << 4, ExclusiveConnCallback = 1u << 5,
++  ExclusiveNdefCallback = 1u << 6, ConfigPending = 1u << 7,
++  CommandWindowBusy = 1u << 8, CommandQueueBusy = 1u << 9,
++  DiscoveryTransition = 1u << 10, ControllerTransition = 1u << 11,
++  ConnectionTxPending = 1u << 12, ConnectionRxPending = 1u << 13,
++  CacheLengthInvalid = 1u << 14, CachedUidLengthInvalid = 1u << 15,
++  SnapshotOverflow = 1u << 16, CaptureAlreadyUsed = 1u << 17,
++  RestoreAlreadyUsed = 1u << 18, RestoreTokenMismatch = 1u << 19,
++  ImmutableStateChanged = 1u << 20, RestoredStateMismatch = 1u << 21
++};
++// Metadata only: no pointer, cache byte, UID or routing value. This is not part
++// of the serialized state compared/restored, and never authorizes an operation.
++struct NativeDiagnostic {
++  uint32_t rejected = 0, controllerFlags = 0, discoveryFlags = 0;
++  uint32_t txQueued = 0, rxQueued = 0;
++  uint8_t controllerState = 0, discoveryState = 0, commandWindow = 0;
++  uint8_t configPending = 0, badField = 0, badLength = 0, badCapacity = 0;
++};
+ struct NativeState {
+   uint8_t size = 0;
+   std::array<uint8_t, 96> data{};
++  NativeDiagnostic diagnostic{};
+ };
+ using NativeReply = void (*)(uint64_t token, bool restored, bool ok,
+                              const NativeState& actual);
+--- a/libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc
++++ b/libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc
+@@ -55,16 +55,24 @@
+ NativeState saved;
+ uint64_t savedToken = 0;
+ bool restoredOnce = false;
+-bool stable() {
++NativeDiagnostic eligibility() {
++  NativeDiagnostic d;
+   const auto h = ReadHostContext();
+-  if (!h.nci2 || !h.discoveryOn || h.exclusive ||
+-      nfc_cb.nfc_state != NFC_STATE_OPEN ||
+-      nfa_dm_cb.disc_cb.disc_state != NFA_DM_RFST_DISCOVERY ||
+-      nfa_dm_cb.p_excl_conn_cback || nfa_dm_cb.p_excl_ndef_cback ||
+-      nfa_dm_cb.setcfg_pending_num ||
+-      nfc_cb.nci_cmd_window != NCI_MAX_CMD_WINDOW ||
+-      nfc_cb.nci_cmd_xmit_q.count)
+-    return false;
++  if (!h.nci2) d.rejected |= WrongNciVersion;
++  if (!h.discoveryOn) d.rejected |= DiscoveryDisabled;
++  if (h.exclusive) d.rejected |= ExclusiveActive;
++  if (nfc_cb.nfc_state != NFC_STATE_OPEN) d.rejected |= ControllerNotOpen;
++  if (nfa_dm_cb.disc_cb.disc_state != NFA_DM_RFST_DISCOVERY)
++    d.rejected |= DiscoveryStateNotStable;
++  if (nfa_dm_cb.p_excl_conn_cback) d.rejected |= ExclusiveConnCallback;
++  if (nfa_dm_cb.p_excl_ndef_cback) d.rejected |= ExclusiveNdefCallback;
++  if (nfa_dm_cb.setcfg_pending_num) d.rejected |= ConfigPending;
++  if (nfc_cb.nci_cmd_window != NCI_MAX_CMD_WINDOW) d.rejected |= CommandWindowBusy;
++  if (nfc_cb.nci_cmd_xmit_q.count) d.rejected |= CommandQueueBusy;
++  d.controllerState = nfc_cb.nfc_state;
++  d.discoveryState = nfa_dm_cb.disc_cb.disc_state;
++  d.commandWindow = nfc_cb.nci_cmd_window;
++  d.configPending = nfa_dm_cb.setcfg_pending_num;
+   constexpr uint16_t transient =
+       NFA_DM_DISC_FLAGS_STOPPING | NFA_DM_DISC_FLAGS_DISABLING |
+       NFA_DM_DISC_FLAGS_CHECKING | NFA_DM_DISC_FLAGS_W4_RSP |
+@@ -74,13 +82,19 @@
+       NFC_FL_CONTROL_REQUESTED | NFC_FL_CONTROL_GRANTED |
+       NFC_FL_DISCOVER_PENDING | NFC_FL_HAL_REQUESTED |
+       NFC_FL_WAIT_MODE_SET_NTF | NFC_FL_WAIT_RF_INTF_EXT_RSP;
+-  if ((nfa_dm_cb.disc_cb.disc_flags & transient) || (nfc_cb.flags & control))
+-    return false;
+-  // No unread fragments or unsent replies may survive the lease boundary.
+-  // All connections, including HCI/SE, must be quiescent for this lab profile.
+-  for (const auto& conn : nfc_cb.conn_cb)
+-    if (conn.tx_q.count || conn.rx_q.count) return false;
+-  return true;
++  d.discoveryFlags = nfa_dm_cb.disc_cb.disc_flags;
++  d.controllerFlags = nfc_cb.flags & control;
++  if (nfa_dm_cb.disc_cb.disc_flags & transient) d.rejected |= DiscoveryTransition;
++  if (nfc_cb.flags & control) d.rejected |= ControllerTransition;
++  // Same rejection policy for ALL connections, including HCI/SE. Only counts,
++  // never queued bytes, are copied into the diagnostic reply.
++  for (const auto& conn : nfc_cb.conn_cb) {
++    if (conn.tx_q.count) d.rejected |= ConnectionTxPending;
++    if (conn.rx_q.count) d.rejected |= ConnectionRxPending;
++    d.txQueued += conn.tx_q.count;
++    d.rxQueued += conn.rx_q.count;
++  }
++  return d;
+ }
+ NativeState snapshot() {
+   NativeState result;
+@@ -110,16 +124,37 @@
+   byte(8);
+   for (const auto& f : fields()) {
+     const uint8_t len = f.length ? *f.length : f.capacity;
+-    if (len > f.capacity ||
+-        (f.id == 0x33 && len != 0 && len != 4 && len != 7 && len != 10))
+-      return {};
++    const bool badLength = len > f.capacity;
++    const bool badUid = f.id == 0x33 && len != 0 && len != 4 && len != 7 && len != 10;
++    if (badLength || badUid) {
++      result = NativeState{};
++      result.diagnostic.rejected = (badLength ? CacheLengthInvalid : 0u) |
++                                   (badUid ? CachedUidLengthInvalid : 0u);
++      result.diagnostic.badField = f.id;
++      result.diagnostic.badLength = len;
++      result.diagnostic.badCapacity = f.capacity;
++      return result;
++    }
+     byte(f.id);
+     byte(len);
+     // Save ALL array bytes, even with logical length0: preserve the exact
+     // cache, not just its controller readback or a guessed NFCID1 policy.
+     for (unsigned i = 0; i < f.capacity; ++i) byte(f.bytes[i]);
+   }
+-  return overflow ? NativeState{} : result;
++  if (overflow) {
++    result = NativeState{};
++    result.diagnostic.rejected = SnapshotOverflow;
++  }
++  return result;
++}
++NativeState checkedSnapshot(NativeDiagnostic diagnostic) {
++  NativeState actual = !diagnostic.rejected ? snapshot() : NativeState{};
++  diagnostic.rejected |= actual.diagnostic.rejected;
++  diagnostic.badField = actual.diagnostic.badField;
++  diagnostic.badLength = actual.diagnostic.badLength;
++  diagnostic.badCapacity = actual.diagnostic.badCapacity;
++  actual.diagnostic = diagnostic;
++  return actual;
+ }
+ bool equal(const NativeState& a, const NativeState& b) {
+   return a.size == b.size && a.size &&
+@@ -162,22 +197,30 @@
+ }
+ bool HandleNativeState(tNFA_DM_MSG* p) {
+   auto* request = reinterpret_cast<Request*>(p);
+-  bool ok = stable();
+-  NativeState actual = ok ? snapshot() : NativeState{};
+-  ok = ok && actual.size;
++  auto diagnostic = eligibility();
++  NativeState actual = checkedSnapshot(diagnostic);
++  bool ok = !actual.diagnostic.rejected && actual.size;
+   if (!request->restore) {
++    if (ok && savedToken) actual.diagnostic.rejected |= CaptureAlreadyUsed;
+     ok = ok && !savedToken;
+     if (ok) {
+       saved = actual;
+       savedToken = request->token;
+     }
+   } else {
+-    ok = ok && !restoredOnce && savedToken == request->token &&
+-         immutableEqual(actual);
++    // Preserve the original short-circuit rejection order; no restoration is
++    // attempted unless every original predicate still holds.
++    if (ok) {
++      if (restoredOnce) actual.diagnostic.rejected |= RestoreAlreadyUsed;
++      else if (savedToken != request->token) actual.diagnostic.rejected |= RestoreTokenMismatch;
++      else if (!immutableEqual(actual)) actual.diagnostic.rejected |= ImmutableStateChanged;
++    }
++    ok = ok && !actual.diagnostic.rejected;
+     if (ok) {
+       restoreCache();
+-      actual = snapshot();
++      actual = checkedSnapshot(diagnostic);
+       ok = equal(actual, saved);
++      if (!ok) actual.diagnostic.rejected |= RestoredStateMismatch;
+       restoredOnce = ok;
+     }
+   }
+--- a/NfcNci/nci/jni/rawt2/OwnerCore.h
++++ b/NfcNci/nci/jni/rawt2/OwnerCore.h
+@@ -33,6 +33,7 @@
+   bool hostExclusive = false;
+   bool hostDiscoveryOn = true;
+   bool nativeRestore = false;
++  std::string nativeDiagnostic;
+   Input(Type t, Bytes b = {}, Event e = {Kind::Data, true, 0, 0, 0, {}},
+         bool dh = false, bool idle = false, uint64_t g = 0)
+       : type(t),
+@@ -47,7 +48,8 @@
+   bool put(Input in) {
+     std::lock_guard<std::mutex> l(m_);
+     if (in.bytes.size() > (in.type == Input::ServiceState ? 4096u : 258u) ||
+-        in.event.data.size() > 64 || q_.size() == 64) {
++        in.event.data.size() > 64 || in.nativeDiagnostic.size() > 384 ||
++        q_.size() == 64) {
+       overflow_ = true;
+       return false;
+     }
+@@ -246,6 +248,7 @@
+   virtual bool gate() = 0;
+   virtual bool ungate() = 0;  // atomic conflict check + release
+   virtual bool healthy() = 0;
++  virtual std::string healthDetail() { return {}; }
+   virtual bool requestServiceState(
+       uint64_t nonce) = 0;  // async, no NFC callback waits
+   virtual bool requestNativeState(bool restore) = 0;
+@@ -350,10 +353,12 @@
+     in.generation = nonce;
+     mailbox.put(std::move(in));
+   }
+-  void nativeState(uint64_t token, bool restore, bool ok, Bytes bytes) {
++  void nativeState(uint64_t token, bool restore, bool ok, Bytes bytes,
++                   std::string diagnostic = {}) {
+     Input in{Input::NativeState, std::move(bytes)};
+     in.generation = token;
+     in.nativeRestore = restore;
++    in.nativeDiagnostic = std::move(diagnostic);
+     in.event.ok = ok;
+     mailbox.put(std::move(in));
+   }
+@@ -521,8 +526,23 @@
+     }
+     if (in.type == Input::NativeState) {
+       if (!gated_ || phase_ == Failed || in.generation != 1) return;
++      record("NATIVE_REPLY ok=" + std::to_string(in.event.ok) +
++             " bytes=" + std::to_string(in.bytes.size()));
++      if (!in.nativeDiagnostic.empty()) record("NATIVE_META " + in.nativeDiagnostic);
+       if (phase_ == BaselineNative && !in.nativeRestore) {
+-        if (!in.event.ok || in.bytes.empty() || !d_.healthy()) {
++        // Same short-circuit decision order; only identify the first failure.
++        if (!in.event.ok) {
++          record("NATIVE_BASELINE_REFUSED reply-failed");
++          fail("native-baseline-unavailable");
++          return;
++        }
++        if (in.bytes.empty()) {
++          record("NATIVE_BASELINE_REFUSED empty-snapshot");
++          fail("native-baseline-unavailable");
++          return;
++        }
++        if (!d_.healthy()) {
++          record("NATIVE_BASELINE_REFUSED driver-unhealthy " + d_.healthDetail());
+           fail("native-baseline-unavailable");
+           return;
+         }
+--- a/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
++++ b/NfcNci/nci/jni/rawt2/AndroidOwner.cpp
+@@ -59,6 +59,14 @@
+     return enabled && nci2 && !activated && !unhealthy &&
+            !admission().conflict();
+   }
++  std::string healthDetail() override {
++    // Observed after the failed health check; not an atomic historical sample.
++    return "observed_enabled=" + std::to_string(enabled.load()) +
++           ";observed_nci2=" + std::to_string(nci2.load()) +
++           ";observed_activated=" + std::to_string(activated.load()) +
++           ";observed_unhealthy=" + std::to_string(unhealthy.load()) +
++           ";observed_conflict=" + std::to_string(admission().conflict());
++  }
+   bool requestServiceState(uint64_t nonce) override {
+     return requestFrameworkState(nonce);
+   }
+@@ -182,7 +190,23 @@
+   Bytes copy;
+   if (valid)
+     copy.assign(actual.data.begin(), actual.data.begin() + actual.size);
+-  runtime().owner.nativeState(token, restore, ok && valid, std::move(copy));
++  const auto& d = actual.diagnostic;
++  const std::string diagnostic =
++      "callback_ok=" + std::to_string(ok) + ";size=" + std::to_string(actual.size) +
++      ";mask=" + std::to_string(d.rejected) +
++      ";nfc_state=" + std::to_string(d.controllerState) +
++      ";disc_state=" + std::to_string(d.discoveryState) +
++      ";disc_flags=" + std::to_string(d.discoveryFlags) +
++      ";control_flags=" + std::to_string(d.controllerFlags) +
++      ";cmd_window=" + std::to_string(d.commandWindow) +
++      ";setcfg_pending=" + std::to_string(d.configPending) +
++      ";tx_queued=" + std::to_string(d.txQueued) +
++      ";rx_queued=" + std::to_string(d.rxQueued) +
++      ";bad_field=" + std::to_string(d.badField) +
++      ";bad_len=" + std::to_string(d.badLength) +
++      ";capacity=" + std::to_string(d.badCapacity);
++  runtime().owner.nativeState(token, restore, ok && valid, std::move(copy),
++                              diagnostic);
+   runtime().wake();
+ }
+ void wire(bool tx, const uint8_t* b, size_t n, bool dh, bool idle,
+--- a/NfcNci/rawt2_tests/owner_test.cc
++++ b/NfcNci/rawt2_tests/owner_test.cc
+@@ -245,7 +245,31 @@
+ int main(int argc, char** argv) {
+   assert(argc == 2);
+   std::string test = argv[1];
+-  if (test.rfind("routing-wire-", 0) == 0) {
++  if (test.rfind("native-diag-", 0) == 0) {
++    Harness h;
++    h.command(1, 3, h.discovery);
++    assert(h.owner.start(h.now, 500));
++    h.owner.serviceState(1, {1, 2, 3}); h.pump();
++    assert(h.owner.phase() == Owner::BaselineNative);
++    const unsigned healthyBefore = h.io.healthyCalls;
++    bool ok = true; Bytes data{1}; std::string note = "callback_ok=0;mask=128";
++    std::string first;
++    if (test == "native-diag-reply") { ok = false; first = "reply-failed"; }
++    else if (test == "native-diag-empty") { data.clear(); first = "empty-snapshot"; }
++    else if (test == "native-diag-health") { h.io.conflicted = true; first = "driver-unhealthy"; }
++    else if (test == "native-diag-bound") { note.assign(385, 'x'); }
++    else { assert(false); }
++    h.owner.nativeState(1, false, ok, data, note); h.pump();
++    assert(h.owner.phase() == Owner::Failed && stops == 0 && h.io.sets == 0 && h.io.routes == 0);
++    if (test == "native-diag-bound") {
++      assert(h.owner.reason() == "callback-queue-overflow");
++    } else {
++      assert(h.owner.reason() == "native-baseline-unavailable");
++      assert(h.owner.audit().find("NATIVE_BASELINE_REFUSED " + first) != std::string::npos);
++      assert(h.owner.audit().find("NATIVE_META " + note) != std::string::npos);
++      assert(h.io.healthyCalls == healthyBefore + (test == "native-diag-health" ? 1 : 0));
++    }
++  } else if (test.rfind("routing-wire-", 0) == 0) {
+     assert(NCI_MSG_RF_SET_ROUTING == 1 && NCI_MSG_RF_GET_ROUTING == 2);
+     assert(kGetRoutingCommand == Bytes({0x21, 0x02, 0x00}));
+     assert(kGetRoutingCommand[1] != NCI_MSG_RF_SET_ROUTING);
+--- a/NfcNci/rawt2_tests/native_state_test.cc
++++ b/NfcNci/rawt2_tests/native_state_test.cc
+@@ -10,6 +10,7 @@
+ #include <string>
+
+ #include "LiepposRawT2Native.h"
++#include "LiepposRawT2Wire.h"
+ #include "nfa_dm_int.h"
+ #include "nfa_ee_int.h"
+ #include "nfc_int.h"
+@@ -28,7 +29,8 @@
+   assert(!queued);
+   queued = p;
+ }
+-uint8_t NFC_GetNCIVersion() { return NCI_VERSION_2_0; }
++static uint8_t nciVersion = NCI_VERSION_2_0;
++uint8_t NFC_GetNCIVersion() { return nciVersion; }
+ void NFC_SetReassemblyFlag(bool b) { nfc_cb.reassembly = b; }
+ void nfa_ee_get_tech_route(uint8_t, uint8_t*) { assert(false); }
+ static void reply(uint64_t token, bool, bool success,
+@@ -48,6 +50,28 @@
+   std::free(p);
+ }
+ static void connection(uint8_t, tNFA_CONN_EVT_DATA*) {}
++static void ndef(uint8_t, tNFA_NDEF_EVT_DATA*) {}
++// Original production stable() predicate, retained only as an independent
++// behavioral reference for the metadata-only refactor. Never used by runtime.
++static bool originalStable() {
++  const auto h = ReadHostContext();
++  if (!h.nci2 || !h.discoveryOn || h.exclusive ||
++      nfc_cb.nfc_state != NFC_STATE_OPEN ||
++      nfa_dm_cb.disc_cb.disc_state != NFA_DM_RFST_DISCOVERY ||
++      nfa_dm_cb.p_excl_conn_cback || nfa_dm_cb.p_excl_ndef_cback ||
++      nfa_dm_cb.setcfg_pending_num ||
++      nfc_cb.nci_cmd_window != NCI_MAX_CMD_WINDOW ||
++      nfc_cb.nci_cmd_xmit_q.count) return false;
++  constexpr uint16_t transient = NFA_DM_DISC_FLAGS_STOPPING | NFA_DM_DISC_FLAGS_DISABLING |
++      NFA_DM_DISC_FLAGS_CHECKING | NFA_DM_DISC_FLAGS_W4_RSP | NFA_DM_DISC_FLAGS_W4_NTF;
++  constexpr uint16_t control = NFC_FL_RESTARTING | NFC_FL_POWER_OFF_SLEEP |
++      NFC_FL_POWER_CYCLE_NFCC | NFC_FL_CONTROL_REQUESTED | NFC_FL_CONTROL_GRANTED |
++      NFC_FL_DISCOVER_PENDING | NFC_FL_HAL_REQUESTED | NFC_FL_WAIT_MODE_SET_NTF |
++      NFC_FL_WAIT_RF_INTF_EXT_RSP;
++  if ((nfa_dm_cb.disc_cb.disc_flags & transient) || (nfc_cb.flags & control)) return false;
++  for (const auto& conn : nfc_cb.conn_cb) if (conn.tx_q.count || conn.rx_q.count) return false;
++  return true;
++}
+ int main(int argc, char** argv) {
+   assert(argc == 2);
+   std::string test = argv[1];
+@@ -63,7 +87,63 @@
+   // bytes.
+   for (unsigned i = 0; i < sizeof(nfa_dm_cb.params.la_nfcid1); ++i)
+     nfa_dm_cb.params.la_nfcid1[i] = uint8_t(0xa0 + i);
+-  if (test == "invalid-input") {
++  if (test == "diag-policy-matrix") {
++    constexpr uint32_t mask = (1u << 14) - 1;
++    for (uint32_t bits = 0; bits <= mask; ++bits) {
++      nciVersion = bits & WrongNciVersion ? NCI_VERSION_1_0 : NCI_VERSION_2_0;
++      nfa_dm_cb.disc_cb.disc_flags = (bits & DiscoveryDisabled ? 0 : NFA_DM_DISC_FLAGS_ENABLED) |
++          (bits & DiscoveryTransition ? NFA_DM_DISC_FLAGS_W4_NTF : 0);
++      nfa_dm_cb.disc_cb.excl_disc_entry.in_use = bits & ExclusiveActive;
++      nfc_cb.nfc_state = uint8_t(NFC_STATE_OPEN + bool(bits & ControllerNotOpen));
++      nfa_dm_cb.disc_cb.disc_state = bits & DiscoveryStateNotStable ? NFA_DM_RFST_IDLE : NFA_DM_RFST_DISCOVERY;
++      nfa_dm_cb.p_excl_conn_cback = bits & ExclusiveConnCallback ? connection : nullptr;
++      nfa_dm_cb.p_excl_ndef_cback = bits & ExclusiveNdefCallback ? ndef : nullptr;
++      nfa_dm_cb.setcfg_pending_num = bool(bits & ConfigPending);
++      nfc_cb.nci_cmd_window = bits & CommandWindowBusy ? 0 : NCI_MAX_CMD_WINDOW;
++      nfc_cb.nci_cmd_xmit_q.count = bool(bits & CommandQueueBusy);
++      nfc_cb.flags = bits & ControllerTransition ? NFC_FL_HAL_REQUESTED : 0;
++      nfc_cb.conn_cb[1].tx_q.count = bool(bits & ConnectionTxPending);
++      nfc_cb.conn_cb[1].rx_q.count = bool(bits & ConnectionRxPending);
++      const bool oldDecision = originalStable();
++      step(false);
++      assert((actual.diagnostic.rejected & mask) == bits);
++      assert(((actual.diagnostic.rejected & mask) == 0) == oldDecision);
++    }
++  } else if (test.rfind("diag-", 0) == 0) {
++    uint32_t expected = 0;
++    if (test == "diag-version") { nciVersion = NCI_VERSION_1_0; expected = WrongNciVersion; }
++    else if (test == "diag-discovery-off") { nfa_dm_cb.disc_cb.disc_flags = 0; expected = DiscoveryDisabled; }
++    else if (test == "diag-exclusive") { nfa_dm_cb.disc_cb.excl_disc_entry.in_use = true; expected = ExclusiveActive; }
++    else if (test == "diag-exclusive-flag") { nfa_dm_cb.flags |= NFA_DM_FLAGS_EXCL_RF_ACTIVE; expected = ExclusiveActive; }
++    else if (test == "diag-controller-state") { nfc_cb.nfc_state = uint8_t(NFC_STATE_OPEN + 1); expected = ControllerNotOpen; }
++    else if (test == "diag-discovery-state") { nfa_dm_cb.disc_cb.disc_state = NFA_DM_RFST_IDLE; expected = DiscoveryStateNotStable; }
++    else if (test == "diag-conn-callback") { nfa_dm_cb.p_excl_conn_cback = connection; expected = ExclusiveConnCallback; }
++    else if (test == "diag-ndef-callback") { nfa_dm_cb.p_excl_ndef_cback = ndef; expected = ExclusiveNdefCallback; }
++    else if (test == "diag-config-pending") { nfa_dm_cb.setcfg_pending_num = 1; expected = ConfigPending; }
++    else if (test == "diag-command-window") { nfc_cb.nci_cmd_window = 0; expected = CommandWindowBusy; }
++    else if (test == "diag-command-queue") { nfc_cb.nci_cmd_xmit_q.count = 1; expected = CommandQueueBusy; }
++    else if (test == "diag-discovery-transition") { nfa_dm_cb.disc_cb.disc_flags |= NFA_DM_DISC_FLAGS_W4_NTF; expected = DiscoveryTransition; }
++    else if (test == "diag-controller-transition") { nfc_cb.flags |= NFC_FL_HAL_REQUESTED; expected = ControllerTransition; }
++    else if (test == "diag-tx") { nfc_cb.conn_cb[1].tx_q.count = 2; expected = ConnectionTxPending; }
++    else if (test == "diag-rx") { nfc_cb.conn_cb[1].rx_q.count = 3; expected = ConnectionRxPending; }
++    else if (test == "diag-cache-length") { nfa_dm_cb.params.la_bit_frame_sdd_len = 2; expected = CacheLengthInvalid; }
++    else if (test == "diag-uid-length") { nfa_dm_cb.params.la_nfcid1_len = 3; expected = CachedUidLengthInvalid; }
++    else if (test == "diag-combined") {
++      nfc_cb.nci_cmd_window = 0; nfa_dm_cb.setcfg_pending_num = 2; nfc_cb.conn_cb[1].rx_q.count = 3;
++      expected = CommandWindowBusy | ConfigPending | ConnectionRxPending;
++    } else if (test == "diag-capture-used") { step(false); assert(ok); expected = CaptureAlreadyUsed; }
++    else if (test == "diag-restore-used") { step(false); assert(ok); step(true); assert(ok); expected = RestoreAlreadyUsed; }
++    else if (test == "diag-wrong-token") { step(false); assert(ok); expected = RestoreTokenMismatch; }
++    else if (test == "diag-immutable") { step(false); assert(ok); ++nfa_dm_cb.disc_cb.disc_duration; expected = ImmutableStateChanged; }
++    else { assert(false); }
++    const bool restore = test == "diag-restore-used" || test == "diag-wrong-token" || test == "diag-immutable";
++    step(restore, test == "diag-wrong-token" ? 2 : 1);
++    assert(!ok && actual.diagnostic.rejected == expected);
++    if (test == "diag-cache-length") assert(actual.size == 0 && actual.diagnostic.badField == 0x30 && actual.diagnostic.badLength == 2 && actual.diagnostic.badCapacity == 1);
++    if (test == "diag-uid-length") assert(actual.size == 0 && actual.diagnostic.badField == 0x33 && actual.diagnostic.badLength == 3);
++    if (test == "diag-rx" || test == "diag-combined") assert(actual.diagnostic.rxQueued == 3);
++    if (test == "diag-tx") assert(actual.diagnostic.txQueued == 2);
++  } else if (test == "invalid-input") {
+     assert(!QueueNativeState(0, false, reply));
+     assert(!QueueNativeState(1, false, nullptr));
+     allocationFails = true;
+--- a/NfcNci/rawt2_tests/run_tests.py
++++ b/NfcNci/rawt2_tests/run_tests.py
+@@ -29,11 +29,20 @@
+                     'malformed-response','wrong-command-payload']
+ CASES += ['routing-wire-'+case for case in ROUTING_WIRE_CASES]
+
++CASES += ['native-diag-'+case for case in ['reply','empty','health','bound']]
++
+ NATIVE_CASES=['restore','preserve-raw-baseline','immutable-change','callback-change',
+               'queued-command','pending-response','queued-data','exclusive-present',
+               'invalid-cache','wrong-token','duplicate-capture','invalid-input',
+               'capture-busy','restore-before-capture','duplicate-restore']
+
++NATIVE_CASES += ['diag-'+case for case in ['version','discovery-off','exclusive',
++    'controller-state','discovery-state','conn-callback','ndef-callback',
++    'config-pending','command-window','command-queue','discovery-transition',
++    'controller-transition','tx','rx','cache-length','uid-length','combined',
++    'capture-used','restore-used','wrong-token','immutable','exclusive-flag',
++    'policy-matrix']]
++
+ def main():
+  ap=argparse.ArgumentParser();ap.add_argument('--report-dir',type=Path,required=True);ap.add_argument('--tsan',action='store_true');args=ap.parse_args()
+  out=args.report_dir.resolve();out.mkdir(parents=True,exist_ok=True)

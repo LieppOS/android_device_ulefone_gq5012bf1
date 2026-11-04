@@ -1,0 +1,70 @@
+{
+  "apply_after": [
+    "owner-trace.patch",
+    "owner-preflight.patch",
+    "owner-bootstrap-caps.patch",
+    "owner-native-diagnostics.patch"
+  ],
+  "before_sha256": {
+    "libnfc-nci/src/include/LiepposRawT2Native.h": "7bb7de3e36b934396559ce2597374a39ffa0612af7b2d2c407232576b12d04ea",
+    "libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc": "80590a597abcd22a5ce7702685c559cd3ab0c36a9a6c1cfb571a04ecd788995e",
+    "NfcNci/rawt2_tests/native_state_test.cc": "42694f2f1953396bfdc334255fb503ced99c8ff27ad6609087a66cfb381e9603",
+    "NfcNci/rawt2_tests/run_tests.py": "2892da3b44431683cf0f530aee67c60b5f168eb49bf65c749d0f9d21a0b9456b"
+  },
+  "after_sha256": {
+    "libnfc-nci/src/include/LiepposRawT2Native.h": "8b6e0f2e0ae1e63d955bf83664075914035e702e0bc58ecee20791fca29fd1be",
+    "libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc": "a569b16917aab6e340b25eb0d12a249f1d76100f9e4869eefce4011ac85999e9",
+    "NfcNci/rawt2_tests/native_state_test.cc": "828ae2ef0762bd05c674a093e68bfa8d854ca360abb6253005eec48a7344844e",
+    "NfcNci/rawt2_tests/run_tests.py": "960238a8f4d385bd270c763564c4e5f717a9eb6b9dd40ac1b5433bc37e73b93c"
+  },
+  "patch_sha256": "c344400dda516e9b813ab3474097b0798f374c9076636c23acbd0dbab7da24c1",
+  "actual_native_diagnostic": {
+    "mask": 8,
+    "nfc_state": 4,
+    "discovery_state": 1,
+    "discovery_flags": 1,
+    "control_flags": 0,
+    "command_window": 1,
+    "setcfg_pending": 0,
+    "tx_queued": 0,
+    "rx_queued": 0
+  },
+  "selected_source_semantics": {
+    "NFC_STATE_IDLE": {
+      "value": 4,
+      "meaning": "normal operation (discovery state)"
+    },
+    "NFC_STATE_OPEN": {
+      "value": 5,
+      "meaning": "NFC link is activated"
+    }
+  },
+  "correction": "Require IDLE, not OPEN, for native capture and restoration. Never accept both. Other guards/serialization/restore/auth/NCI unchanged.",
+  "host_cases": 117,
+  "extra_cases": 9,
+  "eligibility_matrix_combinations": 16384,
+  "matrix_verdict": "Only specified IDLE/OPEN decision swap; all other rejection categories unchanged",
+  "full_Android_build": "PASS, 871.4s, source unchanged",
+  "version": 370400005,
+  "installed": false,
+  "RF_verified": false,
+  "base_owner_commit": "b69857f13212d403a2db9526c58ca83d97cd7844",
+  "actual_APEX_sha256": "81d9e13947486b766d5104e87c194d6fc2c0fbc91da6f3ca533601f7f159ff7f",
+  "actual_JNI_sha256": "ee36e405287d1cc372d7aea3b4131faf3b4c6e5c01f05d9fc8bf9b8d6ed3290a",
+  "package_profile_ABI_dependencies_cert_AVB": "PASS",
+  "live_tested": true,
+  "currently_installed": false,
+  "hardware_native_capture_and_restore_verified": true,
+  "hardware_snapshot_bytes": 76,
+  "hardware_snapshot_rejection_mask": 0,
+  "hardware_listen_activation": {
+    "interface": 1,
+    "protocol": 2,
+    "mode": 128
+  },
+  "NFA_READ": "3004",
+  "synthetic_NCI_reply_bytes": 16,
+  "owner_final": "phase=done;ready=0;restored=1;reads_queued=1;error=",
+  "audit_contiguous_through": 72,
+  "RF_limit": "Collector aborted on own resume status acknowledgement; external three-read result not captured. No controller CRC/RF failure inferred. Factory rollback verified."
+}

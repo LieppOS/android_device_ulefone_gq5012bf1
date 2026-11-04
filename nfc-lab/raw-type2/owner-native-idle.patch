@@ -1,0 +1,114 @@
+--- a/libnfc-nci/src/include/LiepposRawT2Native.h
++++ b/libnfc-nci/src/include/LiepposRawT2Native.h
+@@ -8,7 +8,7 @@
+ // Replies are transient views: consumers MUST copy inside the callback.
+ enum NativeRejection : uint32_t {
+   WrongNciVersion = 1u << 0, DiscoveryDisabled = 1u << 1,
+-  ExclusiveActive = 1u << 2, ControllerNotOpen = 1u << 3,
++  ExclusiveActive = 1u << 2, ControllerNotIdle = 1u << 3,
+   DiscoveryStateNotStable = 1u << 4, ExclusiveConnCallback = 1u << 5,
+   ExclusiveNdefCallback = 1u << 6, ConfigPending = 1u << 7,
+   CommandWindowBusy = 1u << 8, CommandQueueBusy = 1u << 9,
+--- a/libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc
++++ b/libnfc-nci/src/nfa/dm/nfa_dm_raw_t2.cc
+@@ -61,7 +61,9 @@
+   if (!h.nci2) d.rejected |= WrongNciVersion;
+   if (!h.discoveryOn) d.rejected |= DiscoveryDisabled;
+   if (h.exclusive) d.rejected |= ExclusiveActive;
+-  if (nfc_cb.nfc_state != NFC_STATE_OPEN) d.rejected |= ControllerNotOpen;
++  // nfc_int.h: IDLE is normal discovery; OPEN means an ACTIVATED link.
++  // Baseline capture and final restoration must both be unactivated.
++  if (nfc_cb.nfc_state != NFC_STATE_IDLE) d.rejected |= ControllerNotIdle;
+   if (nfa_dm_cb.disc_cb.disc_state != NFA_DM_RFST_DISCOVERY)
+     d.rejected |= DiscoveryStateNotStable;
+   if (nfa_dm_cb.p_excl_conn_cback) d.rejected |= ExclusiveConnCallback;
+--- a/NfcNci/rawt2_tests/native_state_test.cc
++++ b/NfcNci/rawt2_tests/native_state_test.cc
+@@ -53,10 +53,10 @@
+ static void ndef(uint8_t, tNFA_NDEF_EVT_DATA*) {}
+ // Original production stable() predicate, retained only as an independent
+ // behavioral reference for the metadata-only refactor. Never used by runtime.
+-static bool originalStable() {
++static bool originalStable(uint8_t requiredState = NFC_STATE_OPEN) {
+   const auto h = ReadHostContext();
+   if (!h.nci2 || !h.discoveryOn || h.exclusive ||
+-      nfc_cb.nfc_state != NFC_STATE_OPEN ||
++      nfc_cb.nfc_state != requiredState ||
+       nfa_dm_cb.disc_cb.disc_state != NFA_DM_RFST_DISCOVERY ||
+       nfa_dm_cb.p_excl_conn_cback || nfa_dm_cb.p_excl_ndef_cback ||
+       nfa_dm_cb.setcfg_pending_num ||
+@@ -75,7 +75,7 @@
+ int main(int argc, char** argv) {
+   assert(argc == 2);
+   std::string test = argv[1];
+-  nfc_cb.nfc_state = NFC_STATE_OPEN;
++  nfc_cb.nfc_state = NFC_STATE_IDLE;
+   nfc_cb.nci_cmd_window = NCI_MAX_CMD_WINDOW;
+   nfc_cb.reassembly = true;
+   nfa_dm_cb.disc_cb.disc_state = NFA_DM_RFST_DISCOVERY;
+@@ -87,14 +87,27 @@
+   // bytes.
+   for (unsigned i = 0; i < sizeof(nfa_dm_cb.params.la_nfcid1); ++i)
+     nfa_dm_cb.params.la_nfcid1[i] = uint8_t(0xa0 + i);
+-  if (test == "diag-policy-matrix") {
++  if (test == "diag-nonidle-states") {
++    for (uint8_t state = NFC_STATE_NONE; state <= NFC_STATE_NFCC_POWER_OFF_SLEEP; ++state) {
++      if (state == NFC_STATE_IDLE) continue;
++      nfc_cb.nfc_state = state;
++      step(false); assert(!ok && actual.size == 0 && actual.diagnostic.rejected == ControllerNotIdle);
++      step(true); assert(!ok && actual.size == 0 && actual.diagnostic.rejected == ControllerNotIdle);
++    }
++  } else if (test == "diag-discovery-state-golden") {
++    assert(NFC_STATE_IDLE == 4 && NFC_STATE_OPEN == 5);
++    step(false); assert(ok && actual.size > 0 && actual.diagnostic.rejected == 0);
++    // An activated link is unsafe for capture AND for final restoration.
++    nfc_cb.nfc_state = NFC_STATE_OPEN;
++    step(true); assert(!ok && actual.diagnostic.rejected == ControllerNotIdle);
++  } else if (test == "diag-policy-matrix") {
+     constexpr uint32_t mask = (1u << 14) - 1;
+     for (uint32_t bits = 0; bits <= mask; ++bits) {
+       nciVersion = bits & WrongNciVersion ? NCI_VERSION_1_0 : NCI_VERSION_2_0;
+       nfa_dm_cb.disc_cb.disc_flags = (bits & DiscoveryDisabled ? 0 : NFA_DM_DISC_FLAGS_ENABLED) |
+           (bits & DiscoveryTransition ? NFA_DM_DISC_FLAGS_W4_NTF : 0);
+       nfa_dm_cb.disc_cb.excl_disc_entry.in_use = bits & ExclusiveActive;
+-      nfc_cb.nfc_state = uint8_t(NFC_STATE_OPEN + bool(bits & ControllerNotOpen));
++      nfc_cb.nfc_state = bits & ControllerNotIdle ? NFC_STATE_OPEN : NFC_STATE_IDLE;
+       nfa_dm_cb.disc_cb.disc_state = bits & DiscoveryStateNotStable ? NFA_DM_RFST_IDLE : NFA_DM_RFST_DISCOVERY;
+       nfa_dm_cb.p_excl_conn_cback = bits & ExclusiveConnCallback ? connection : nullptr;
+       nfa_dm_cb.p_excl_ndef_cback = bits & ExclusiveNdefCallback ? ndef : nullptr;
+@@ -105,9 +118,14 @@
+       nfc_cb.conn_cb[1].tx_q.count = bool(bits & ConnectionTxPending);
+       nfc_cb.conn_cb[1].rx_q.count = bool(bits & ConnectionRxPending);
+       const bool oldDecision = originalStable();
++      const bool correctedDecision = originalStable(NFC_STATE_IDLE);
+       step(false);
+       assert((actual.diagnostic.rejected & mask) == bits);
+-      assert(((actual.diagnostic.rejected & mask) == 0) == oldDecision);
++      const bool admitted = (actual.diagnostic.rejected & mask) == 0;
++      assert(admitted == correctedDecision);
++      // Only swap the one misidentified state. Every other rejection remains
++      // identical over all16384 combinations; active OPEN is now refused.
++      assert((oldDecision != admitted) == (bits == 0 || bits == ControllerNotIdle));
+     }
+   } else if (test.rfind("diag-", 0) == 0) {
+     uint32_t expected = 0;
+@@ -115,7 +133,7 @@
+     else if (test == "diag-discovery-off") { nfa_dm_cb.disc_cb.disc_flags = 0; expected = DiscoveryDisabled; }
+     else if (test == "diag-exclusive") { nfa_dm_cb.disc_cb.excl_disc_entry.in_use = true; expected = ExclusiveActive; }
+     else if (test == "diag-exclusive-flag") { nfa_dm_cb.flags |= NFA_DM_FLAGS_EXCL_RF_ACTIVE; expected = ExclusiveActive; }
+-    else if (test == "diag-controller-state") { nfc_cb.nfc_state = uint8_t(NFC_STATE_OPEN + 1); expected = ControllerNotOpen; }
++    else if (test == "diag-controller-state") { nfc_cb.nfc_state = NFC_STATE_OPEN; expected = ControllerNotIdle; }
+     else if (test == "diag-discovery-state") { nfa_dm_cb.disc_cb.disc_state = NFA_DM_RFST_IDLE; expected = DiscoveryStateNotStable; }
+     else if (test == "diag-conn-callback") { nfa_dm_cb.p_excl_conn_cback = connection; expected = ExclusiveConnCallback; }
+     else if (test == "diag-ndef-callback") { nfa_dm_cb.p_excl_ndef_cback = ndef; expected = ExclusiveNdefCallback; }
+--- a/NfcNci/rawt2_tests/run_tests.py
++++ b/NfcNci/rawt2_tests/run_tests.py
+@@ -41,7 +41,7 @@
+     'config-pending','command-window','command-queue','discovery-transition',
+     'controller-transition','tx','rx','cache-length','uid-length','combined',
+     'capture-used','restore-used','wrong-token','immutable','exclusive-flag',
+-    'policy-matrix']]
++    'policy-matrix','discovery-state-golden','nonidle-states']]
+
+ def main():
+  ap=argparse.ArgumentParser();ap.add_argument('--report-dir',type=Path,required=True);ap.add_argument('--tsan',action='store_true');args=ap.parse_args()

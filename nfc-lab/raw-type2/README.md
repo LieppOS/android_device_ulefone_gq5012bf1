@@ -100,6 +100,46 @@ restored with original hashes and healthy services. GET_ROUTING remains offline
 validated, not controller/RF verified. See the research bootstrap/native retest;
 hardware RF remains UNKNOWN.
 
+## Native eligibility diagnostics and correct discovery-state fence
+
+Apply `owner-native-diagnostics.patch` FOURTH, then `owner-native-idle.patch` FIFTH.
+Their provenance files pin all seven diagnostic and four corrective before/after
+hashes. Both actual patch reverse/forward/replay checks pass. All production
+resources remain default-off; these source patches do not autostart a session.
+
+The diagnostic callback carries metadata-only rejection bits, state/flag/queue
+counts and invalid cache-field ID/length/capacity. No UID, cache content, routing
+entry or pointer is logged. The actor distinguishes failed reply, empty snapshot
+and failed driver health in the original short-circuit order. Diagnostic input
+is bounded; an exception/refusal does not grant a retry or clear one-shot state.
+115 sanitizer cases plus9 extra regressions and16384 eligibility combinations
+validated this observability-only stage; full Android370400004/package checks
+passed. Actual diagnostic metadata then identified only mask8, nfc_state4.
+
+Selected nfc_int.h defines IDLE4 as NORMAL DISCOVERY and OPEN5 as an ACTIVATED
+link. Initialization/deactivation set IDLE; activation sets OPEN. The helper had
+incorrectly required OPEN while the owner prohibits an activated link. The old
+host fixture shared that error. The corrective patch REPLACES the requirement
+with IDLE for capture and restoration; it does not accept both states or omit
+state checking. All other fences/serialization/restoration/auth/NCI are unchanged.
+Independent golden tests accept IDLE4 and reject OPEN5/all other native states;
+the16384-combination matrix proves only the intended state4/state5 decision swap.
+117 sanitizer cases pass on both corrected and replayed source;9 additional
+restoration/audit regressions also pass. Full Android370400005 build passed871.4s
+with source unchanged; actual APEX,
+JNI/ABI/dependencies/profile, signing/AVB and matching-client checks pass.
+
+The corrected snapshot passed on the phone:76 bytes, rejection mask0. Real
+GET_ROUTING2/readbacks and explicit DH-A routing passed, the owner reached READY,
+and the controller activated FRAME1 / T2T2 / listen-A80. One READ3004 reached the
+validated NFA callback and one exact16-byte synthetic reply was queued through
+NCI. Recovered audit1..72 was contiguous, with terminal done/restored1/error-empty,
+matching final native snapshot and framework verification. Factory NFC rollback
+was verified afterward. This is NOT yet the external three-read RF PASS: the host
+collector misclassified its own paused=false resume acknowledgement and exited;
+that separate collector fix belongs to the research collector. No full NTAG,
+Classic, arbitrary UID or firmware-unlock claim follows.
+
 No change here enables the experiment or authorizes installing, staging an APEX,
 flashing the reader, changing phone routing/labels, or restarting NFC. Offline
 passing tests and signed packages are not Type2 RF verification.
