@@ -20,3 +20,6 @@
 /dev/block/mmcblk0rpmb                    u:object_r:rpmb_device:s0
 /dev/block/sdc1                           u:object_r:misc_block_device:s0
 /tmp/misc/keystore(/.*)?    u:object_r:keystore_data_file:s0
+
+# Stock Widevine DRM HAL (also inside the stock vendor APEX's own file_contexts).
+/vendor/bin/hw/android\.hardware\.drm-service(-lazy)?\.widevine  u:object_r:hal_drm_widevine_exec:s0

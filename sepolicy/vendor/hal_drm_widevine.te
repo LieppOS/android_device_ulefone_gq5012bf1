@@ -1,0 +1,14 @@
+# Stock Widevine DRM HAL, shipped in the stock vendor APEX
+# com.google.android.widevine.nonupdatable (bin/hw/android.hardware.drm-service.widevine).
+#
+# The stock vendor policy defines this domain; the source-built vendor policy
+# did not, so the build's apex_sepolicy_tests rejected the APEX's file labels
+# (hal_drm_widevine_exec unknown). This declares the domain and its entry
+# point only. The stock policy's 29 device rules (TrustKernel/Teei/Mobicore
+# TEE nodes, /dev/drm_wv, vcu, keybox block devices) reference stock types
+# the source-built policy does not have yet, so they are not reproduced here.
+type hal_drm_widevine, domain;
+hal_server_domain(hal_drm_widevine, hal_drm)
+
+type hal_drm_widevine_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(hal_drm_widevine)
