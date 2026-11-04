@@ -7,6 +7,9 @@
 # rebuilt vendor image must audit each replacement (especially RIL, protobuf,
 # tinycompress, and the removed libmnl symlink) before flashing.
 
+# LieppOS: stock Ulefone/MediaTek apps are not packaged (EXTRACT_ONLY), except
+# M170infisens, whose APK ThermoVue repacks. RevampedFMRadio and
+# MtkImsServiceGq5012bf1 replace YftFmRadio and the stock ImsService.
 # product
 # partition properties
 product/etc/build.prop;EXTRACT_ONLY
@@ -21,127 +24,127 @@ product/priv-app/ImsServiceEntitlement/oat/arm64/ImsServiceEntitlement.vdex;EXTR
 # device hardware application
 system/app/M170infisens/M170infisens.apk
 # device hardware application
-system/app/YftBarometer/YftBarometer.apk
+system/app/YftBarometer/YftBarometer.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftMiniScreen/YftMiniScreen.apk
+system/app/YftMiniScreen/YftMiniScreen.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftOutdoorLightUlefone/YftOutdoorLightUlefone.apk
+system/app/YftOutdoorLightUlefone/YftOutdoorLightUlefone.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftRedBlueLight/YftRedBlueLight.apk
+system/app/YftRedBlueLight/YftRedBlueLight.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftSensorCalibration/YftSensorCalibration.apk
+system/app/YftSensorCalibration/YftSensorCalibration.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftStepRecord/YftStepRecord.apk
+system/app/YftStepRecord/YftStepRecord.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftSuperScreen/YftSuperScreen.apk
+system/app/YftSuperScreen/YftSuperScreen.apk;EXTRACT_ONLY
 # device hardware application
-system/app/YftTorch/YftTorch.apk
+system/app/YftTorch/YftTorch.apk;EXTRACT_ONLY
 # device hardware application
 system/media/resource/Download/uSmartCamera.apk;EXTRACT_ONLY
 
 # system_ext
 # device application
-system_ext/app/ATMWifiMeta/ATMWifiMeta.apk
+system_ext/app/ATMWifiMeta/ATMWifiMeta.apk;EXTRACT_ONLY
 # device application
 system_ext/app/ATMWifiMeta/oat/arm64/ATMWifiMeta.odex;EXTRACT_ONLY
 # device application
 system_ext/app/ATMWifiMeta/oat/arm64/ATMWifiMeta.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/Camera.apk
+system_ext/app/Camera/Camera.apk;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libMNN.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libMNN.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libMNN_GL.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libMNN_GL.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libMNN_OpenCL.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libMNN_OpenCL.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libMNN_Vulkan.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libMNN_Vulkan.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_doc.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_doc.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_facebeauty.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_facebeauty.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_facedetect.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_facedetect.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_facedetection.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_facedetection.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_filter.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_filter.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_glut.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_glut.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_panorama.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_panorama.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_portrait_bokeh.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_portrait_bokeh.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libaw_skinmask.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libaw_skinmask.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libawtoken.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libawtoken.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libc++_shared.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libc++_shared.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libfusion.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libfusion.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libjni_yuv_encode.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libjni_yuv_encode.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libpixsmart_hdr.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libpixsmart_hdr.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libpixsmart_mf_base.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libpixsmart_mf_base.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libpixsmart_mf_base2.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libpixsmart_mf_base2.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libpixsmart_mfsr.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libpixsmart_mfsr.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libpixsmart_ns.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libpixsmart_ns.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libsxs_aiscene.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libsxs_aiscene.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libsxs_exp_ctrl.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libsxs_exp_ctrl.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libsxs_hdshot.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libsxs_hdshot.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libsxs_portrait_plus.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libsxs_portrait_plus.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libsxsturbojpeg.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libsxsturbojpeg.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libtensorflowlite.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libtensorflowlite.so;EXTRACT_ONLY
 # device application
-system_ext/app/Camera/lib/arm64/libtensorflowlite_gpu_delegate.so;MAKE_COPY_RULE_ONLY
+system_ext/app/Camera/lib/arm64/libtensorflowlite_gpu_delegate.so;EXTRACT_ONLY
 # device application
 system_ext/app/Camera/oat/arm64/Camera.odex;EXTRACT_ONLY
 # device application
 system_ext/app/Camera/oat/arm64/Camera.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/MtkGallery2/galleryfeature/Gallery2Drm/Gallery2Drm.apk
+system_ext/app/MtkGallery2/galleryfeature/Gallery2Drm/Gallery2Drm.apk;EXTRACT_ONLY
 # device application
 system_ext/app/MtkGallery2/galleryfeature/Gallery2Drm/oat/arm64/Gallery2Drm.odex;EXTRACT_ONLY
 # device application
 system_ext/app/MtkGallery2/galleryfeature/Gallery2Drm/oat/arm64/Gallery2Drm.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/OP08Ims/OP08Ims.apk
+system_ext/app/OP08Ims/OP08Ims.apk;EXTRACT_ONLY
 # device application
 system_ext/app/OP08Ims/oat/arm64/OP08Ims.odex;EXTRACT_ONLY
 # device application
 system_ext/app/OP08Ims/oat/arm64/OP08Ims.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/OP12Ims/OP12Ims.apk
+system_ext/app/OP12Ims/OP12Ims.apk;EXTRACT_ONLY
 # device application
 system_ext/app/OP12Ims/oat/arm64/OP12Ims.odex;EXTRACT_ONLY
 # device application
 system_ext/app/OP12Ims/oat/arm64/OP12Ims.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/YGPS/YGPS.apk
+system_ext/app/YGPS/YGPS.apk;EXTRACT_ONLY
 # device application
 system_ext/app/YGPS/oat/arm64/YGPS.odex;EXTRACT_ONLY
 # device application
 system_ext/app/YGPS/oat/arm64/YGPS.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/YftFmRadio/YftFmRadio.apk
+system_ext/app/YftFmRadio/YftFmRadio.apk;EXTRACT_ONLY
 # device application
 system_ext/app/YftFmRadio/oat/arm64/YftFmRadio.odex;EXTRACT_ONLY
 # device application
 system_ext/app/YftFmRadio/oat/arm64/YftFmRadio.vdex;EXTRACT_ONLY
 # device application
-system_ext/app/mediatek-res/mediatek-res.apk
+system_ext/app/mediatek-res/mediatek-res.apk;EXTRACT_ONLY
 # stock init service aee_aed64
 system_ext/bin/aee_aed64
 # stock init service aee-reinit_v2; stock init service aee_aed64_v2
@@ -231,7 +234,7 @@ system_ext/lib64/vendor.mediatek.hardware.log@1.0.so
 # DT_NEEDED by system_ext/lib64/libmtk_vt_service.so
 system_ext/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
 # device application
-system_ext/priv-app/ImsService/ImsService.apk
+system_ext/priv-app/ImsService/ImsService.apk;EXTRACT_ONLY
 # device application
 system_ext/priv-app/ImsService/oat/arm64/ImsService.odex;EXTRACT_ONLY
 # device application
@@ -246,7 +249,7 @@ system_ext/priv-app/Nfc_st/oat/arm64/Nfc_st.odex;EXTRACT_ONLY
 # device application
 system_ext/priv-app/Nfc_st/oat/arm64/Nfc_st.vdex;EXTRACT_ONLY
 # device application
-system_ext/priv-app/OP12ImsPco/OP12ImsPco.apk
+system_ext/priv-app/OP12ImsPco/OP12ImsPco.apk;EXTRACT_ONLY
 # device application
 system_ext/priv-app/OP12ImsPco/oat/arm64/OP12ImsPco.odex;EXTRACT_ONLY
 # device application

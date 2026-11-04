@@ -10,8 +10,4 @@
         <permission name="android.permission.READ_PRIVILEGED_PHONE_STATE"/>
         <permission name="android.permission.LOCATION_BYPASS"/>
     </privapp-permissions>
-    <!-- Stock OP12ImsPco (vendor blob, system_ext/priv-app). -->
-    <privapp-permissions package="com.mediatek.ims.pco">
-        <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND"/>
-    </privapp-permissions>
 </permissions>
