@@ -115,7 +115,14 @@ set_prop(recovery, vendor_mtk_trustkernel_tee_prop)
 # Recovery hosts Keystore2 and is the FBE client.
 binder_call(recovery, recovery)
 hal_client_domain(recovery, hal_keymint)
-hal_client_domain(recovery, hal_gatekeeper)
+# Gatekeeper client role only. hal_client_domain() would also add the
+# hal_gatekeeper attribute (the recovery policy is always compiled with
+# target_full_treble=false, i.e. passthrough), and since AOSP 6a8ad6fbc that
+# attribute carries write access to gatekeeper_vendor_data_file, which the
+# recovery neverallows forbid. Gatekeeper runs as hal_gatekeeper_default and
+# talks to recovery over binder (below), so the attribute is not needed.
+typeattribute recovery halclientdomain;
+typeattribute recovery hal_gatekeeper_client;
 binder_call(hal_keymint_default, recovery)
 binder_call(hal_gatekeeper_default, recovery)
 allow recovery keystore_service:service_manager find;
