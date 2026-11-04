@@ -78,7 +78,7 @@ final class Lights {
     // Low = 10 % duty. The driver keeps the per-colour level; this process keeps
     // the last level it set so the tile can tell Low from Max.
     static final int LED_LOW = 26, LED_MAX = 255;
-    private static int sRedLevel = -1, sBlueLevel = -1;
+    private static volatile int sRedLevel = -1, sBlueLevel = -1;
 
     static int ledState(boolean red) {
         String s = read(LEDS);
@@ -98,5 +98,52 @@ final class Lights {
     /** level 0..255; the LieppOS driver dims 1..254 with hardware PWM. */
     static void setColor(boolean red, int level) {
         IO.post(() -> write(LEDS, (red ? "red " : "blue ") + level));
+    }
+
+    // ---- automation API (LightApi): synchronous, call from a worker thread ----
+
+    /** Red/blue now at 0..255 (0 = off; 1..254 = hardware PWM, 40 steps). */
+    static void ledNow(boolean red, int level) {
+        level = Math.max(0, Math.min(LED_MAX, level));
+        if (red) sRedLevel = level; else sBlueLevel = level;
+        write(LEDS, (red ? "red " : "blue ") + level);
+    }
+
+    /** Driver mode string: ALL_OFF, RED_ON, BLUE_ON, ALL_ON, RED_FLASH, BLUE_FLASH, RED_BLUE_FLASH. */
+    static String ledMode() {
+        return read(LEDS);
+    }
+
+    static boolean ledOn(boolean red) {
+        return ledState(red) != OFF;
+    }
+
+    /** Stock red/blue patterns of the driver: 4 red flash, 5 blue flash, 6 red-blue flash. */
+    static void ledPatternNow(int mode) {
+        sRedLevel = 0;
+        sBlueLevel = 0;
+        write(LEDS, Integer.toString(mode));
+    }
+
+    /** Super flashlight now at 0..100 % (0 = off), mapped onto the driver's 1..94. */
+    static void flashlightNow(int percent) {
+        if (!"OFF".equals(read(MODE))) write(MODE, "0"); // leave a stock blink/SOS
+        if (percent <= 0) {
+            write(BRIGHTNESS, "0");
+            return;
+        }
+        percent = Math.min(100, percent);
+        int raw = LEVEL_LOW + Math.round((percent - 1) * (LEVEL_MAX - LEVEL_LOW) / 99f);
+        write(BRIGHTNESS, Integer.toString(raw));
+    }
+
+    static boolean flashlightOn() {
+        return flashlightState() != OFF;
+    }
+
+    /** Stock super-flashlight patterns of the driver: 4 blink (50/50 ms), 5 SOS. */
+    static void flashlightModeNow(int mode) {
+        write(BRIGHTNESS, "0");
+        write(MODE, Integer.toString(mode));
     }
 }
