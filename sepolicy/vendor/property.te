@@ -1,3 +1,12 @@
 vendor_internal_prop(vendor_mtk_trustkernel_tee_prop)
 # Stock Microarray diagnostic properties, not activation switches.
 vendor_internal_prop(vendor_yft_fingerprint_prop)
+
+# ro.vendor.camera.drop_high_speed_video_sizes (device.mk): high-speed video
+# sizes the MediaTek camera HAL advertises but cannot serve. Set from
+# /vendor/build.prop (vendor_init) and read by cameraserver
+# (patches/frameworks_av). Vendor property_contexts may only use vendor_
+# types, and a restricted vendor property is the kind coredomain may read.
+vendor_restricted_prop(vendor_camera_hfps_prop)
+set_prop(vendor_init, vendor_camera_hfps_prop)
+get_prop(cameraserver, vendor_camera_hfps_prop)
