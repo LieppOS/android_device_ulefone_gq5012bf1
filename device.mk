@@ -98,6 +98,17 @@ PRODUCT_PACKAGES += \
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.lieppos.low_power_limits_refresh_rate=false
 
+# Smooth display: drop to the lowest allowed rate (60 Hz) after 1 s without
+# new frames, jump back to 120 Hz on touch, and match video frame rates.
+# Without these SurfaceFlinger stays at the top of the range (120 Hz) even on
+# a static screen. Verified live: static 60 Hz, touch/scroll 120 Hz, no flicker.
+# Product partition, not vendor: our flash set is system/system_ext/product.
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.surface_flinger.use_content_detection_for_refresh_rate=true \
+    ro.surface_flinger.set_idle_timer_ms=1000 \
+    ro.surface_flinger.set_touch_timer_ms=300 \
+    ro.surface_flinger.set_display_power_timer_ms=1000
+
 # ThermoVue may open the built-in thermal camera (InfiRay 3474:4321) without the
 # per-connection USB dialog (patches/frameworks_base/0002).
 PRODUCT_SYSTEM_PROPERTIES += \
