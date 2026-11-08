@@ -81,6 +81,19 @@ vibration, TrustKernel TEE with KeyMint/Gatekeeper/Keystore2, metadata
 encryption, FBE decryption and MediaTek BootControl. That recovery validation
 does not validate the full-ROM vendor rebuild.
 
+Slot B firmware partitions:
+
+- The stock vendor `init.mt6878.rc` mounts `mcf_ota_<slot>` (modem MCF OTA
+  data, e.g. the `misc_data/plmn/TS25/<MCC digit>` operator-name tables) on
+  `/mnt/vendor/mdota`. On units that only ever ran stock from slot A,
+  `mcf_ota_b` is blank. The mount then fails and the modem retries
+  `/vendor/etc/mdota/misc_data/plmn/...` through `ccci_fsd` every 10-25 s,
+  waking the AP (thousands of `ccci_fs` wakeups per day). Before running from
+  slot B, copy the stock partition (read-only data, same on both slots):
+  `dd if=/dev/block/by-name/mcf_ota_a of=/dev/block/by-name/mcf_ota_b bs=1M conv=fsync`
+  and verify both sha256 sums match. Fixed on the test unit on 2026-11-08:
+  screen-off wakeups dropped from about one per 17 s to about one per minute.
+
 Known limitations:
 
 - The kernel is the stock Ulefone GKI prebuilt in this tree; the published
