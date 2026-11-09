@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Battery saver CPU cap, driven by ArmorParts (PowerSaveCap) through
+# sys.lieppos.powersave. Caps the big cluster (policy4, max 2.6 GHz); the
+# little cluster stays unrestricted. Tune without a rebuild:
+#   setprop persist.sys.lieppos.powersave_big_khz 1800000
+# (takes effect at the next battery saver change).
+
+on property:sys.lieppos.powersave=1
+    write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq ${persist.sys.lieppos.powersave_big_khz:-2000000}
+
+on property:sys.lieppos.powersave=0
+    write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2600000

@@ -8,6 +8,13 @@
  * and the USB port stuck in host mode (no adb/MTP over the cable). This does
  * the same from the persistent ArmorParts process.
  *
+ * Background guard: ThermoVue keeps the thermal camera powered and the main
+ * camera open when it is merely sent to the background (or the screen turns
+ * off). Measured: 5 min of background camera use, the APU and camera sensor
+ * held awake for 8 min. If ThermoVue has no foreground activity for
+ * BACKGROUND_GRACE_MS while either camera is still in use, it is force-stopped;
+ * onProcessDied then powers the thermal camera off and releases the USB port.
+ *
  * It also grants ThermoVue "all files access" once (if still at the default):
  * it saves captures to Pictures/thermo_tc2c with plain file paths.
  */
@@ -33,6 +40,8 @@ final class ThermalGuard {
     static final String PKG = "com.energy.tc2c";
     private static final String RAILS = "/sys/devices/platform/yft_tiny2c_usb/tiny2c_usb_mode";
     private static final String ROUTE = "/sys/class/yft_extcon/tiny2c_mode";
+    static final long BACKGROUND_GRACE_MS = 60_000;
+    private static final Runnable BACKGROUND_CHECK = ThermalGuard::stopIfStillBackground;
 
     private static Handler sIo;
     private static int sUid = -1;
@@ -67,7 +76,12 @@ final class ThermalGuard {
                 String packageName, String processName) {}
 
         @Override
-        public void onForegroundActivitiesChanged(int pid, int uid, boolean fg) {}
+        public void onForegroundActivitiesChanged(int pid, int uid, boolean fg) {
+            if (uid != sUid) return;
+            Log.i(TAG, PKG + " pid " + pid + " foreground activities: " + fg);
+            sIo.removeCallbacks(BACKGROUND_CHECK);
+            if (!fg) sIo.postDelayed(BACKGROUND_CHECK, BACKGROUND_GRACE_MS);
+        }
 
         @Override
         public void onForegroundServicesChanged(int pid, int uid, int serviceTypes) {}
@@ -86,12 +100,50 @@ final class ThermalGuard {
         return false;
     }
 
+    private static boolean appInForeground() {
+        ActivityManager am = sContext.getSystemService(ActivityManager.class);
+        for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
+            if (p.uid == sUid && p.importance
+                    <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean thermalCameraOn() {
+        return read(RAILS).contains("=1") || "1".equals(read(ROUTE));
+    }
+
+    private static boolean cameraInUse() {
+        try {
+            AppOpsManager ops = sContext.getSystemService(AppOpsManager.class);
+            return ops.isOperationActive(AppOpsManager.OP_CAMERA, sUid, PKG);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "camera op query failed: " + e);
+            return false;
+        }
+    }
+
+    /** ThermoVue left in the background with a camera running: stop it. */
+    private static void stopIfStillBackground() {
+        boolean running = appRunning();
+        boolean foreground = running && appInForeground();
+        boolean thermal = thermalCameraOn();
+        boolean camera = running && cameraInUse();
+        Log.i(TAG, "background check: running=" + running + " foreground=" + foreground
+                + " thermal=" + thermal + " camera=" + camera);
+        if (!running || foreground || (!thermal && !camera)) return;
+        Log.w(TAG, PKG + " in background for " + BACKGROUND_GRACE_MS / 1000
+                + " s with thermal=" + thermal + " camera=" + camera + "; stopping it");
+        sContext.getSystemService(ActivityManager.class).forceStopPackage(PKG);
+        sIo.postDelayed(ThermalGuard::cleanupIfOrphaned, 1000);
+    }
+
     /** Power the camera off and release the USB host role, but only if it was left on. */
     private static void cleanupIfOrphaned() {
         if (appRunning()) return;
-        boolean railsOn = read(RAILS).contains("=1");
-        boolean routeOn = "1".equals(read(ROUTE));
-        if (!railsOn && !routeOn) return;
+        if (!thermalCameraOn()) return;
         Log.w(TAG, PKG + " died with the thermal camera on; powering it off");
         write(RAILS, "0");
         write(ROUTE, "0");
