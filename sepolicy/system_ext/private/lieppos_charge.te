@@ -1,0 +1,5 @@
+# Charge limit: /proc/mtk_battery_cmd/current_cmd (MediaTek charger "discharging"
+# command). Stock labels it generic proc, which init may not write. Only init
+# writes it, from system_ext/etc/init/lieppos-chargelimit.rc.
+type lieppos_charge_proc, fs_type, proc_type;
+allow init lieppos_charge_proc:file w_file_perms;

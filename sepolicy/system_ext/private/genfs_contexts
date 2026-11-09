@@ -1,0 +1,2 @@
+# Charge limit control node (see lieppos_charge.te).
+genfscon proc /mtk_battery_cmd/current_cmd u:object_r:lieppos_charge_proc:s0

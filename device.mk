@@ -124,6 +124,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/rootdir/etc/init/lieppos-powersave.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/lieppos-powersave.rc
 
+# Charge limit (Settings > Battery > Charge limit in ArmorParts): this rc
+# applies ArmorParts' sys.lieppos.charge_pause to the MediaTek charger.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/etc/init/lieppos-chargelimit.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/lieppos-chargelimit.rc
+
 # FM radio: RevampedFMRadio (fmradio/, iusmac mtk v3.1.3) on the stock
 # fmradio_drv_connac2x driver, stock FM firmware and the stock MediaTek audio HAL.
 # Replaces the stock YftFmRadio, whose libyftfmjni.so is not in the vendor payload.

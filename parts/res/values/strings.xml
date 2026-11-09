@@ -12,4 +12,18 @@
     <string name="usmart_connected">uSmart accessory connected</string>
     <string name="usmart_unnamed">USB device</string>
     <string name="usmart_usb_c_note">USB-C data (adb, file transfer) is paused while it is attached: both share the phone\'s USB controller.</string>
+
+    <!-- Settings > Battery > Charge limit -->
+    <string name="charge_limit_title">Charge limit</string>
+    <string name="charge_limit_switch">Limit charging</string>
+    <string name="charge_limit_value">Stop charging at %1$d%%</string>
+    <string name="charge_limit_summary_off">Off</string>
+    <string name="charge_limit_summary_on">Stops at %1$d%%</string>
+    <string name="charge_limit_summary_paused">Paused at %1$d%%, running from the charger</string>
+    <string name="charge_limit_status_off">Charging is not limited</string>
+    <string name="charge_limit_status_paused">Charging paused at %1$d%%. The phone runs from the charger; the battery is neither charged nor drained.</string>
+    <string name="charge_limit_status_charging">Charging: %1$d%%, stops at %2$d%%</string>
+    <string name="charge_limit_status_unplugged">Not plugged in (%1$d%%)</string>
+    <string name="charge_limit_note">Keeping the battery below full reduces wear. Charging resumes if the level falls to %1$d%% while plugged in. Charging past the limit needs the switch turned off.</string>
+    <string name="charge_limit_note_full">At 100%% the limit has no effect.</string>
 </resources>

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Charge limit (Settings > Battery > Charge limit), decided by ArmorParts
+# (ChargeLimit) through sys.lieppos.charge_pause. The MediaTek charger driver's
+# "discharging" command turns charging off but keeps the power path, so the
+# phone runs from the charger while paused. Format: "<usb_unlimited> <discharging>".
+# The node is labelled lieppos_charge_proc (sepolicy/system_ext/private).
+
+on property:sys.lieppos.charge_pause=1
+    write /proc/mtk_battery_cmd/current_cmd "0 1"
+
+on property:sys.lieppos.charge_pause=0
+    write /proc/mtk_battery_cmd/current_cmd "0 0"

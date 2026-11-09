@@ -4,7 +4,7 @@ import android.app.Application;
 
 /**
  * Persistent process: starts the thermal camera guard, the uSmart notifier, the light intent API
- * and the battery saver CPU cap at boot.
+ * the battery saver CPU cap and the charge limit at boot.
  */
 public class ArmorApp extends Application {
     @Override
@@ -14,5 +14,6 @@ public class ArmorApp extends Application {
         UsmartNotifier.start(this);
         LightApi.start(this);
         PowerSaveCap.start(this);
+        ChargeLimit.start(this);
     }
 }

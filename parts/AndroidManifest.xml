@@ -60,5 +60,30 @@
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE"
                 android:value="true" />
         </service>
+
+        <!-- Settings > Battery > Charge limit (injected tile, system apps only). -->
+        <activity
+            android:name=".ChargeLimitActivity"
+            android:label="@string/charge_limit_title"
+            android:icon="@drawable/ic_charge_limit"
+            android:theme="@android:style/Theme.DeviceDefault.DayNight"
+            android:excludeFromRecents="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.android.settings.action.IA_SETTINGS" />
+            </intent-filter>
+            <meta-data android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.battery" />
+            <meta-data android:name="com.android.settings.title"
+                android:resource="@string/charge_limit_title" />
+            <meta-data android:name="com.android.settings.icon"
+                android:resource="@drawable/ic_charge_limit" />
+            <meta-data android:name="com.android.settings.summary_uri"
+                android:value="content://org.lieppos.armorparts.chargelimit/getDynamicSummary/charge_limit" />
+        </activity>
+        <provider
+            android:name=".ChargeLimitProvider"
+            android:authorities="org.lieppos.armorparts.chargelimit"
+            android:exported="true" />
     </application>
 </manifest>
