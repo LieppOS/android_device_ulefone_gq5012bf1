@@ -98,14 +98,24 @@ PRODUCT_PACKAGES += \
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.lieppos.low_power_limits_refresh_rate=false
 
-# Smooth display: drop to the lowest allowed rate (60 Hz) after 1 s without
+# A status bar clock with seconds otherwise keeps the panel at 120 Hz: on this
+# multi-refresh-rate panel the status bar only casts NoVote, and "no layers with
+# votes" picks the maximum rate on every tick. Needs patches/frameworks_native/0001
+# (active NoVote-only layers keep the current mode). Verified live: static home
+# 60 Hz with seconds shown; touch, scrolling and app launches still 120 Hz.
+PRODUCT_SYSTEM_PROPERTIES += \
+    ro.lieppos.sf.novote_keeps_mode=true
+
+# Smooth display: drop to the lowest allowed rate (60 Hz) after 750 ms without
 # new frames, jump back to 120 Hz on touch, and match video frame rates.
 # Without these SurfaceFlinger stays at the top of the range (120 Hz) even on
 # a static screen. Verified live: static 60 Hz, touch/scroll 120 Hz, no flicker.
+# 750 ms (not 1 s) so the idle timer expires between 1 Hz status bar clock
+# ticks (seconds shown) instead of racing them.
 # Product partition, not vendor: our flash set is system/system_ext/product.
 PRODUCT_PRODUCT_PROPERTIES += \
     ro.surface_flinger.use_content_detection_for_refresh_rate=true \
-    ro.surface_flinger.set_idle_timer_ms=1000 \
+    ro.surface_flinger.set_idle_timer_ms=750 \
     ro.surface_flinger.set_touch_timer_ms=300 \
     ro.surface_flinger.set_display_power_timer_ms=1000
 
