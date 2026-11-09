@@ -10,9 +10,23 @@ android_app {
     resource_dirs: ["res"],
     manifest: "AndroidManifest.xml",
     platform_apis: true,
+    // Settings > Battery > Charge limit uses Settings' own page components.
+    static_libs: [
+        "androidx.preference_preference",
+        "SettingsLibSettingsTheme",
+        "SettingsLibCollapsingToolbarBaseActivity",
+        "SettingsLibMainSwitchPreference",
+        "SettingsLibSliderPreference",
+        "SettingsLibFooterPreference",
+    ],
     certificate: "platform",
     system_ext_specific: true,
+    // Shrink only (drops unused androidx/SettingsLib code); no renaming or
+    // optimisation. Manifest components are kept by aapt2's generated rules.
     optimize: {
-        enabled: false,
+        enabled: true,
+        shrink: true,
+        optimize: false,
+        obfuscate: false,
     },
 }

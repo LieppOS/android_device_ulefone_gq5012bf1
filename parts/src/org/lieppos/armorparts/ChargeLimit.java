@@ -103,7 +103,7 @@ final class ChargeLimit {
         // A changed limit is applied as set: raising it above the level resumes
         // charging right away, the resume gap only damps level fluctuations.
         evaluate(context, false);
-        context.getContentResolver().notifyChange(SUMMARY_URI, null);
+        notifySummary(context);
     }
 
     private static void update(Context context, Intent battery) {
@@ -134,7 +134,16 @@ final class ChargeLimit {
         } catch (RuntimeException e) {
             Log.e(TAG, "set " + PROP + " failed", e);
         }
-        context.getContentResolver().notifyChange(SUMMARY_URI, null);
+        notifySummary(context);
+    }
+
+    /** Best effort: a failed Settings summary refresh must not take down this process. */
+    private static void notifySummary(Context context) {
+        try {
+            context.getContentResolver().notifyChange(SUMMARY_URI, null);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "summary notify failed: " + e);
+        }
     }
 
     static String summary(Context context) {
