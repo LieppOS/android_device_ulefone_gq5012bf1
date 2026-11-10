@@ -96,6 +96,16 @@ Slot B firmware partitions:
 
 Known limitations:
 
+- **Never read `/sys/hynitron_debug/hyn_gesture_mode`.** Its show handler in
+  the stock `hynitron.ko` (CO5300 secondary-display touch) has the wrong
+  prototype for `kobj_attr_show`, so any read trips kernel CFI and panics the
+  phone (`CFI failure at kobj_attr_show (target: hyn_gesture_show)`, reboot
+  reason `kernel_panic`). Root file managers or tools that walk `/sys` can hit it.
+- Screen-off touch gestures (FT3680 + `yft_tpd_gesture`, switch
+  `/sys/bus/platform/drivers/mtk_yft_tpd/tpgesture_status`) are off and not
+  wired up: stock firmware uses a userspace listener on the tpd misc device.
+  Intentionally not enabled.
+
 - The kernel is the stock Ulefone GKI prebuilt in this tree; the published
   C48/C50 source baseline is integrated separately.
 - Full-ROM runtime behaviour (camera, audio, telephony, sensors, thermal
