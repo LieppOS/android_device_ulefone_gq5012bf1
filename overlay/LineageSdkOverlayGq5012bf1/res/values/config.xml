@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AW2013 front RGB LED serves notifications and battery:
+         RGB notification (1) + RGB battery (2) + pulsating (8) + battery LED (64). -->
+    <integer name="config_deviceLightCapabilities">75</integer>
+</resources>

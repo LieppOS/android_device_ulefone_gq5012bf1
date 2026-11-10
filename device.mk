@@ -93,6 +93,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     SettingsOverlayGq5012bf1
 
+# Front RGB notification/battery LED (AW2013 via the MediaTek lights HAL)
+PRODUCT_PACKAGES += \
+    FrameworksResOverlayGq5012bf1 \
+    LineageSdkOverlayGq5012bf1
+
 # Keep the full refresh range (up to 120 Hz) in battery saver. Needs
 # patches/frameworks_base/0001 (AOSP otherwise always caps rendering at 60 Hz).
 PRODUCT_SYSTEM_PROPERTIES += \

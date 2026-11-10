@@ -1,0 +1,8 @@
+//
+// Framework resource overlay for Ulefone GQ5012BF1.
+//
+
+runtime_resource_overlay {
+    name: "FrameworksResOverlayGq5012bf1",
+    product_specific: true,
+}
