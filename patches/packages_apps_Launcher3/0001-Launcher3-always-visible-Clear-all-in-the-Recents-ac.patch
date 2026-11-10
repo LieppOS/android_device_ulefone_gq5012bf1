@@ -1,0 +1,76 @@
+From 2378c4196f66a4b5ab7e7c477779fda5ec684bec Mon Sep 17 00:00:00 2001
+From: LieppOS <lieppos@localhost>
+Date: Tue, 10 Nov 2026 02:05:52 +0200
+Subject: [PATCH] Launcher3: always-visible "Clear all" in the Recents actions
+ row
+
+The stock Clear all button only appears after scrolling past the
+oldest task. Add a "Clear all" button next to Screenshot in the
+overview actions row, wired to RecentsView#dismissAllTasks (the same
+action, animation and logging as the end-of-list button). It is hidden
+together with the rest of the row (no tasks, split select, desktop).
+
+Change-Id: I3fbc279c3e1475b840e7ed1cea7f5966fd8ddf5f
+---
+ quickstep/res/drawable/ic_clear_all_recents.xml       | 11 +++++++++++
+ quickstep/res/layout/overview_actions_container.xml   |  9 +++++++++
+ .../src/com/android/quickstep/views/RecentsView.java  |  5 +++++
+ 3 files changed, 25 insertions(+)
+ create mode 100644 quickstep/res/drawable/ic_clear_all_recents.xml
+
+diff --git a/quickstep/res/drawable/ic_clear_all_recents.xml b/quickstep/res/drawable/ic_clear_all_recents.xml
+new file mode 100644
+index 0000000000..2692f6d1af
+--- /dev/null
++++ b/quickstep/res/drawable/ic_clear_all_recents.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Material "clear_all" icon, sized and tinted like ic_screenshot. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="20dp"
++    android:height="20dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++  <path
++      android:pathData="M5,13h14v-2H5v2zM3,17h14v-2H3v2zM7,7v2h14V7H7z"
++      android:fillColor="#000000"/>
++</vector>
+diff --git a/quickstep/res/layout/overview_actions_container.xml b/quickstep/res/layout/overview_actions_container.xml
+index ce54028256..14e3248822 100644
+--- a/quickstep/res/layout/overview_actions_container.xml
++++ b/quickstep/res/layout/overview_actions_container.xml
+@@ -37,6 +37,15 @@
+             android:drawableStart="@drawable/ic_screenshot"
+             android:text="@string/action_screenshot" />
+ 
++        <!-- LieppOS: always-visible "Clear all" (same action as the button after the last task). -->
++        <Button
++            android:id="@+id/action_clear_all"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_marginStart="@dimen/overview_actions_button_spacing"
++            android:drawableStart="@drawable/ic_clear_all_recents"
++            android:text="@string/recents_clear_all" />
++
+         <Button
+             android:id="@+id/action_split"
+             android:layout_width="wrap_content"
+diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
+index 4ca0a119f5..f7f97895ab 100644
+--- a/quickstep/src/com/android/quickstep/views/RecentsView.java
++++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
+@@ -1042,6 +1042,11 @@ public abstract class RecentsView<
+         mIs3PLauncher = !mOverviewComponentObserver.isHomeAndOverviewSame();
+         mActionsView = actionsView;
+         mActionsView.updateHiddenFlags(HIDDEN_NO_TASKS, !hasTaskViews());
++        // LieppOS: "Clear all" in the actions row does what the end-of-list button does.
++        View actionClearAll = mActionsView.findViewById(R.id.action_clear_all);
++        if (actionClearAll != null) {
++            actionClearAll.setOnClickListener(this::dismissAllTasks);
++        }
+         // Update flags for 1p/3p launchers
+         mActionsView.updateFor3pLauncher(mIs3PLauncher);
+ 
+-- 
+2.56.0
+
