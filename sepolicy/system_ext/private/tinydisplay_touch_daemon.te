@@ -1,0 +1,28 @@
+# TinyDisplay rear touch daemon (tinydisplay/daemon). Apps cannot open
+# /dev/input, so an init service grabs the rear hyn_ts panel (EVIOCGRAB keeps
+# rear touches off the main display) and forwards gestures to
+# com.tinydisplay/.TinyDisplayService via `cmd activity`, plus a live touch
+# stream over an abstract UNIX socket. The app itself runs as platform_app,
+# which the stock vendor policy already lets use the tinylcd HAL.
+type tinydisplay_touch_daemon, domain, coredomain;
+type tinydisplay_touch_daemon_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(tinydisplay_touch_daemon)
+
+# Scan /dev/input/event* by name and grab hyn_ts.
+allow tinydisplay_touch_daemon input_device:dir r_dir_perms;
+allow tinydisplay_touch_daemon input_device:chr_file r_file_perms;
+
+# system("/system/bin/cmd activity start-foreground-service ...")
+allow tinydisplay_touch_daemon shell_exec:file rx_file_perms;
+allow tinydisplay_touch_daemon system_file:file rx_file_perms;
+allow tinydisplay_touch_daemon activity_service:service_manager find;
+binder_use(tinydisplay_touch_daemon)
+binder_call(tinydisplay_touch_daemon, system_server)
+binder_call(system_server, tinydisplay_touch_daemon)
+# cmd hands its stdout/stderr pipes (inherited from the daemon) to system_server.
+allow system_server tinydisplay_touch_daemon:fd use;
+allow system_server tinydisplay_touch_daemon:fifo_file { write getattr };
+
+# Live drag stream to the app's abstract socket.
+allow tinydisplay_touch_daemon self:unix_stream_socket create_socket_perms;
+allow tinydisplay_touch_daemon platform_app:unix_stream_socket connectto;
