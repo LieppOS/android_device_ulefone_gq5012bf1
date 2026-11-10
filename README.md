@@ -109,7 +109,14 @@ Known limitations:
 - The kernel is the stock Ulefone GKI prebuilt in this tree; the published
   C48/C50 source baseline is integrated separately.
 - Full-ROM runtime behaviour (camera, audio, telephony, sensors, thermal
-  camera, secondary display) is configured but unproven on hardware.
+  camera) is configured but not exhaustively validated on hardware.
+- Rear 340x340 screen works (verified 2026-11-11): TinyDisplay
+  (`vendor/lieppos/apps/TinyDisplay`, personal flavor) draws through the stock
+  tinylcd HAL; `tinydisplay_touch_daemon` owns the rear touch panel. It needs
+  the fixed `spi_tiny_co5300_lcd.ko` in `vendor_dlkm` (backlight GPIO made
+  optional; see `LieppOS_kernel/build/co5300-probe-fix/README.md`). The
+  vendor_dlkm partition is not built by this tree: reflash it with the
+  fixed module after restoring any older vendor_dlkm backup.
 
 ## Related repositories
 
