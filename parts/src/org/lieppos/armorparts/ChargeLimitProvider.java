@@ -24,7 +24,8 @@ public class ChargeLimitProvider extends ContentProvider {
     public Bundle call(String method, String arg, Bundle extras) {
         if (!METHOD_GET_DYNAMIC_SUMMARY.equals(method)) return null;
         Bundle result = new Bundle();
-        if ("battery_info".equals(arg)) {
+        // Settings passes the whole summary uri as arg (key = last path segment).
+        if (arg != null && "battery_info".equals(Uri.parse(arg).getLastPathSegment())) {
             BatteryInfo info = BatteryInfo.read();
             int health = info == null ? -1 : info.healthPercent();
             if (health < 0) return null;
