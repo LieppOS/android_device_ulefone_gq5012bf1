@@ -81,6 +81,26 @@
             <meta-data android:name="com.android.settings.summary_uri"
                 android:value="content://org.lieppos.armorparts.chargelimit/getDynamicSummary/charge_limit" />
         </activity>
+        <!-- Settings > Battery > Battery info (same provider serves the summary). -->
+        <activity
+            android:name=".BatteryInfoActivity"
+            android:label="@string/batt_info_title"
+            android:icon="@drawable/ic_battery_info"
+            android:theme="@style/ChargeLimitTheme"
+            android:excludeFromRecents="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.android.settings.action.IA_SETTINGS" />
+            </intent-filter>
+            <meta-data android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.battery" />
+            <meta-data android:name="com.android.settings.title"
+                android:resource="@string/batt_info_title" />
+            <meta-data android:name="com.android.settings.icon"
+                android:resource="@drawable/ic_battery_info" />
+            <meta-data android:name="com.android.settings.summary_uri"
+                android:value="content://org.lieppos.armorparts.chargelimit/getDynamicSummary/battery_info" />
+        </activity>
         <provider
             android:name=".ChargeLimitProvider"
             android:authorities="org.lieppos.armorparts.chargelimit"

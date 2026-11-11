@@ -1,0 +1,5 @@
+# /sys/class/3rd-gauge/battery_info: read-only SH366003 snapshot (cell
+# voltages, SoH, FCC, ...) shown by ArmorParts (system_app) in
+# Settings > Battery > Battery info.
+type lieppos_gauge_sysfs, fs_type, sysfs_type;
+allow system_app lieppos_gauge_sysfs:file r_file_perms;

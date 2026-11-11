@@ -18,6 +18,7 @@ import android.widget.TextView;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
+import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.settingslib.collapsingtoolbar.CollapsingToolbarBaseActivity;
 import com.android.settingslib.widget.FooterPreference;
@@ -40,6 +41,7 @@ public class ChargeLimitActivity extends CollapsingToolbarBaseActivity {
         private MainSwitchPreference mSwitch;
         private SliderPreference mSlider;
         private Preference mStatus;
+        private SwitchPreferenceCompat mHeat;
         private FooterPreference mFooter;
 
         private final BroadcastReceiver mBattery = new BroadcastReceiver() {
@@ -103,6 +105,21 @@ public class ChargeLimitActivity extends CollapsingToolbarBaseActivity {
             mStatus.setPersistent(false);
             screen.addPreference(mStatus);
 
+            // Independent of the limit switch above.
+            mHeat = new SwitchPreferenceCompat(context);
+            mHeat.setKey("charge_heat_pause");
+            mHeat.setPersistent(false);
+            mHeat.setTitle(R.string.heat_pause_title);
+            mHeat.setSummary(getString(R.string.heat_pause_summary,
+                    ChargeLimit.HOT_PAUSE_DC / 10, ChargeLimit.HOT_RESUME_DC / 10));
+            mHeat.setChecked(ChargeLimit.isHeatPauseEnabled(context));
+            mHeat.setOnPreferenceChangeListener((p, value) -> {
+                ChargeLimit.setHeatPauseEnabled(requireContext(), (Boolean) value);
+                refresh();
+                return true;
+            });
+            screen.addPreference(mHeat);
+
             mFooter = new FooterPreference(context);
             mFooter.setKey(FooterPreference.KEY_FOOTER);
             screen.addPreference(mFooter);
@@ -155,7 +172,12 @@ public class ChargeLimitActivity extends CollapsingToolbarBaseActivity {
             int level = ChargeLimit.getLevel();
             mStatus.setVisible(level >= 0);
             mStatus.setIcon(R.drawable.ic_charge_limit);
-            if (!enabled) {
+            if (ChargeLimit.isPaused() && ChargeLimit.isHot()) {
+                mStatus.setTitle(getString(R.string.heat_pause_status_title,
+                        ChargeLimit.getTemp() / 10.0f));
+                mStatus.setSummary(getString(R.string.heat_pause_status_summary,
+                        ChargeLimit.HOT_RESUME_DC / 10));
+            } else if (!enabled) {
                 mStatus.setTitle(R.string.charge_limit_status_off);
                 mStatus.setSummary(null);
             } else if (ChargeLimit.isPaused()) {

@@ -24,6 +24,14 @@ public class ChargeLimitProvider extends ContentProvider {
     public Bundle call(String method, String arg, Bundle extras) {
         if (!METHOD_GET_DYNAMIC_SUMMARY.equals(method)) return null;
         Bundle result = new Bundle();
+        if ("battery_info".equals(arg)) {
+            BatteryInfo info = BatteryInfo.read();
+            int health = info == null ? -1 : info.healthPercent();
+            if (health < 0) return null;
+            result.putString(META_DATA_PREFERENCE_SUMMARY,
+                    getContext().getString(R.string.batt_info_summary, health));
+            return result;
+        }
         result.putString(META_DATA_PREFERENCE_SUMMARY, ChargeLimit.summary(getContext()));
         return result;
     }
