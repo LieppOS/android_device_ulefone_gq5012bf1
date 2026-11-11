@@ -107,8 +107,23 @@ BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT := true
 BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 BOARD_PREBUILT_DTBIMAGE_DIR := $(DEVICE_PATH)/prebuilt/dtbs
 
-# Stock DTBO partition.
+# DTBO partition (see dtbo/README.md).
+#   LIEPPOS_DTBO=stock  (default) prebuilt/dtbo.img, the verified stock image.
+#   LIEPPOS_DTBO=source compile the kernel's arch/arm64/boot/dts/mediatek/
+#                       gq5012bf1.dts with dtbo/build-dtbo.sh. Fails rather
+#                       than falling back to stock. A result whose bytes the
+#                       stock MediaTek cert no longer covers additionally
+#                       needs LIEPPOS_DTBO_ALLOW_UNSIGNED=true.
+# $(PRODUCT_OUT)/lieppos-dtbo-report.txt records which one was used.
+LIEPPOS_DTBO ?= stock
+ifeq ($(LIEPPOS_DTBO),source)
+LIEPPOS_KERNEL_SOURCE ?= $(abspath ../LieppOS_kernel/android/kernel/ulefone/gq5012bf1)
+BOARD_PREBUILT_DTBOIMAGE := $(OUT_DIR)/target/product/gq5012bf1/obj/LIEPPOS_DTBO/dtbo.img
+else ifeq ($(LIEPPOS_DTBO),stock)
 BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbo.img
+else
+$(error LIEPPOS_DTBO must be 'stock' or 'source', got '$(LIEPPOS_DTBO)')
+endif
 
 # -------------------------------------------------
 # Partitions
