@@ -12,4 +12,11 @@
 
     <!-- AOSP: Display > Smooth Display -->
     <bool name="config_show_smooth_display">true</bool>
+
+    <!-- Safety & emergency > Wireless emergency alerts. The stock vendor
+         MtkSettingsResOverlay (from Ulefone's GMS ROM) points this at
+         com.google.android.cellbroadcastreceiver, which is not installed, so
+         the entry did nothing. Restore the AOSP module receiver, the package
+         CellBroadcastService delivers alerts to. -->
+    <string name="config_cell_broadcast_receiver_package" translatable="false">com.android.cellbroadcastreceiver.module</string>
 </resources>
