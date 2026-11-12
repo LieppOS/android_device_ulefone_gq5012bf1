@@ -2,3 +2,4 @@
 genfscon proc /mtk_battery_cmd/current_cmd u:object_r:lieppos_charge_proc:s0
 # SH366003 gauge snapshot for ArmorParts' Battery info page (sh366003_fg battery_info).
 genfscon sysfs /class/3rd-gauge/battery_info u:object_r:lieppos_gauge_sysfs:s0
+genfscon sysfs /class/3rd-gauge/power_now u:object_r:lieppos_gauge_sysfs:s0
