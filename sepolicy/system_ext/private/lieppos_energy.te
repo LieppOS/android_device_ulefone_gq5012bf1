@@ -1,0 +1,4 @@
+# Driver energy counters (microwatt-seconds) reported as custom power
+# components by system_server (com.android.server.powerstats.LiepposEnergyConsumers).
+type lieppos_energy_sysfs, fs_type, sysfs_type;
+allow system_server lieppos_energy_sysfs:file r_file_perms;

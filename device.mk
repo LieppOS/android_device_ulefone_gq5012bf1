@@ -158,6 +158,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_SYSTEM_EXT_PROPERTIES += \
     ro.fm.chip=0x6635
 
+# Settings > Battery usage: the unique hardware as custom power components.
+# The drivers keep energy counters (microwatt-seconds, from power measured on
+# this phone); the framework (LiepposEnergyConsumers) reads them because there
+# is no PowerStats HAL. Format: Name:/sys/path;... ("_" shows as a space;
+# make splits property values at spaces and drops values containing "=").
+PRODUCT_SYSTEM_EXT_PROPERTIES += \
+    ro.lieppos.power.energy_consumers=Super_flashlight:/sys/devices/platform/yft_camplight/energy_flashlight_uws;Red_and_blue_lights:/sys/devices/platform/yft_camplight/energy_redblue_uws;Thermal_camera:/sys/devices/platform/yft_tiny2c_usb/energy_uws
+
 # ThermoVue Pro for the built-in Tiny2-C thermal camera (thermovue/; 64-bit repack of
 # the stock app, replaces M170infisens). ArmorParts powers the camera off if it dies.
 PRODUCT_PACKAGES += \

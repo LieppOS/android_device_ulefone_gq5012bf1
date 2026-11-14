@@ -1,0 +1,2 @@
+# LiepposEnergyConsumers: driver energy counters for Settings > Battery usage.
+ro.lieppos.power.energy_consumers u:object_r:system_prop:s0 exact string

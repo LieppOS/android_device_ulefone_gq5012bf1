@@ -3,3 +3,8 @@ genfscon proc /mtk_battery_cmd/current_cmd u:object_r:lieppos_charge_proc:s0
 # SH366003 gauge snapshot for ArmorParts' Battery info page (sh366003_fg battery_info).
 genfscon sysfs /class/3rd-gauge/battery_info u:object_r:lieppos_gauge_sysfs:s0
 genfscon sysfs /class/3rd-gauge/power_now u:object_r:lieppos_gauge_sysfs:s0
+# Energy counters of the lights and the thermal camera, read by system_server
+# (LiepposEnergyConsumers) for Settings > Battery usage.
+genfscon sysfs /devices/platform/yft_camplight/energy_flashlight_uws u:object_r:lieppos_energy_sysfs:s0
+genfscon sysfs /devices/platform/yft_camplight/energy_redblue_uws u:object_r:lieppos_energy_sysfs:s0
+genfscon sysfs /devices/platform/yft_tiny2c_usb/energy_uws u:object_r:lieppos_energy_sysfs:s0
