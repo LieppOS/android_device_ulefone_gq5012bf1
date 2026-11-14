@@ -8,3 +8,8 @@ genfscon sysfs /class/3rd-gauge/power_now u:object_r:lieppos_gauge_sysfs:s0
 genfscon sysfs /devices/platform/yft_camplight/energy_flashlight_uws u:object_r:lieppos_energy_sysfs:s0
 genfscon sysfs /devices/platform/yft_camplight/energy_redblue_uws u:object_r:lieppos_energy_sysfs:s0
 genfscon sysfs /devices/platform/yft_tiny2c_usb/energy_uws u:object_r:lieppos_energy_sysfs:s0
+# Camera sensor (imgsensor, i2c-4 0x20) wakeup source, created when the camera
+# opens. The stock vendor policy labels the other wakeup dirs but not this one,
+# so system_suspend logged "Permission denied" for every stat and the kernel
+# wakelock stats skipped it.
+genfscon sysfs /devices/platform/soc/11c23000.i2c/i2c-4/4-0020/wakeup u:object_r:sysfs_wakeup:s0
