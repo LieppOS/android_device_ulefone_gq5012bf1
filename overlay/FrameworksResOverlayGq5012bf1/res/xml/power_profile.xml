@@ -4,22 +4,39 @@
 
   Replaces the vendor placeholder (generic MediaTek values: 3/4 CPU speeds per
   cluster that this SoC does not have, all modem values 0, capacity 21200),
-  which left CPU out of Battery usage entirely.
+  which left CPU, mobile radio and Wi-Fi out of Battery usage.
 
-  Units: mA in the fuel gauge's (sh366003) units, the same units Android uses
-  for capacity and drain on this phone.
+  Units: mA in the fuel gauge's (sh366003) units = single-cell equivalent at
+  ~3.85 V, the same units Android uses for capacity and drain on this phone.
+  All values measured on the phone 2026-11-15/16 from the battery gauge
+  (24-50 samples per point, median), screen off and CPU pinned to minimum
+  unless noted. Runs 2-5 were done with USB connected and the charger power
+  path off (/sys/devices/platform/charger/enable_power_path=0); a repeat of
+  run-1 CPU points that way matched (big 125 vs 127, little 12.3 vs 13 mA).
 
-  MEASURED 2026-11-15 on the phone, on battery, screen off, wakelock held,
-  frequencies pinned, 24 gauge samples per point (median):
-    cpu.core_power.*  per-core increment of 1 vs 2 busy cores at each frequency,
-                      fitted as a*f + b*f^3 (little: 2.28/1.26, big: 20.10/4.06)
-    cpu.cluster_power / cpu.active   1-core minus 2-core increment (~1 mA)
-    cpu.idle          awake idle 82.5 mA minus the suspend floor
-    cpu.suspend       screen-off overnight drain, 5 % of 8874 mAh in 9.9 h
-                      at 1 % awake (batterystats history 2026-11-15 04:31-14:27)
-  NOT MEASURED (vendor values kept): screen, ambient, wifi, bluetooth, gps,
-  audio, video, camera, radio.*.  The modem needs a <modem> block before
-  mobile radio can be attributed; not added without a measurement.
+  cpu.core_power.*  per-core increment, 1 vs 2 busy cores per frequency,
+                    fitted a*f + b*f^3 (little 2.28/1.26, big 20.10/4.06)
+  cpu.cluster_power / cpu.active   1-core minus 2-core increment (~1 mA)
+  cpu.idle          awake idle (82.5) minus the suspend floor
+  cpu.suspend       overnight screen-off drain (5 % of 8874 mAh in 9.9 h,
+                    1 % awake) minus modem sleep
+  screen.on         screen on at minimum brightness vs off: 37
+  screen.full       OLED (Visionox VTDR6115): brightness cost depends on
+                    content. Min->max (slider 100 %, backlight 2049) was +14
+                    on the dark lock screen and +127 with colour inversion.
+                    Value is for typical mixed content (APL ~0.3); full white
+                    would be ~150-300.  ESTIMATE from measured endpoints.
+  gps.on            GPS tracking with fix vs off, 3 cycles: 21.5
+  wifi.*            connected idle +2, scanning +25, download at ~89 Mbit/s
+                    +91 after CPU; controller rx/tx scaled to the chip's own
+                    reported rx/tx airtime during that download (29 % / 13 %)
+  modem             airplane vs registered idle +2 (sleep); connected tail
+                    after a small request +10 for ~6 s (idle); LTE download at
+                    ~53 Mbit/s +126 after CPU (receive). The modem reports no
+                    TX time, so transmit = receive (not measured separately).
+  radio.active      call power = LTE active (VoLTE), not measured on a call.
+  NOT MEASURED (vendor values kept): ambient, bluetooth, audio, video, camera,
+  radio.scanning, radio.on.
 -->
 <device name="Android">
     <item name="battery.capacity">10600</item>
@@ -44,23 +61,43 @@
     <item name="cpu.cluster_power.cluster1">0.5</item>
     <item name="cpu.active">0.5</item>
     <item name="cpu.idle">38</item>
-    <item name="cpu.suspend">44</item>
+    <item name="cpu.suspend">42</item>
+
+    <item name="screen.on">37</item>
+    <item name="screen.full">65</item>
+
+    <item name="gps.on">21.5</item>
+
+    <item name="wifi.on">2</item>
+    <item name="wifi.scan">25</item>
+    <item name="wifi.active">91</item>
+    <item name="wifi.controller.idle">2</item>
+    <item name="wifi.controller.rx">215</item>
+    <item name="wifi.controller.tx">215</item>
+
+    <item name="radio.active">126</item>
+
+    <modem>
+        <sleep>2</sleep>
+        <idle>10</idle>
+        <active rat="DEFAULT">
+            <receive>126</receive>
+            <transmit level="0">126</transmit>
+            <transmit level="1">126</transmit>
+            <transmit level="2">126</transmit>
+            <transmit level="3">126</transmit>
+            <transmit level="4">126</transmit>
+        </active>
+    </modem>
 
     <!-- vendor values, not measured -->
     <item name="ambient.on">10</item>
-    <item name="screen.on">1</item>
-    <item name="screen.full">480</item>
     <item name="bluetooth.active">31</item>
     <item name="bluetooth.on">1</item>
-    <item name="wifi.on">0.1</item>
-    <item name="wifi.active">280</item>
-    <item name="wifi.scan">33</item>
     <item name="audio">13</item>
     <item name="video">71</item>
     <item name="camera.flashlight">160</item>
     <item name="camera.avg">550</item>
-    <item name="gps.on">35</item>
-    <item name="radio.active">500</item>
     <item name="radio.scanning">65</item>
     <array name="radio.on">
         <value>3</value>
