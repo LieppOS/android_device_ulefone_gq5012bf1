@@ -1,42 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Power profile for the Ulefone Armor 29 Pro (GQ5012BF1, MT6878).
+  Every value below was measured on this phone (2026-11-15/16) from the
+  sh366003 fuel gauge; nothing is copied from the vendor placeholder.
+  Units: mA, single-cell equivalent (~3.85 V) = the units Android uses for
+  capacity on this phone. Method: battery current with the charger power path
+  off (USB connected), 24-200 samples per point, medians; CPU pinned to known
+  frequencies and its share (from /proc/stat x measured core power) subtracted
+  where hardware was exercised. Raw logs: build/btf-kernel/power-measurements.
 
-  Replaces the vendor placeholder (generic MediaTek values: 3/4 CPU speeds per
-  cluster that this SoC does not have, all modem values 0, capacity 21200),
-  which left CPU, mobile radio and Wi-Fi out of Battery usage.
-
-  Units: mA in the fuel gauge's (sh366003) units = single-cell equivalent at
-  ~3.85 V, the same units Android uses for capacity and drain on this phone.
-  All values measured on the phone 2026-11-15/16 from the battery gauge
-  (24-50 samples per point, median), screen off and CPU pinned to minimum
-  unless noted. Runs 2-5 were done with USB connected and the charger power
-  path off (/sys/devices/platform/charger/enable_power_path=0); a repeat of
-  run-1 CPU points that way matched (big 125 vs 127, little 12.3 vs 13 mA).
-
-  cpu.core_power.*  per-core increment, 1 vs 2 busy cores per frequency,
-                    fitted a*f + b*f^3 (little 2.28/1.26, big 20.10/4.06)
-  cpu.cluster_power / cpu.active   1-core minus 2-core increment (~1 mA)
-  cpu.idle          awake idle (82.5) minus the suspend floor
-  cpu.suspend       overnight screen-off drain (5 % of 8874 mAh in 9.9 h,
-                    1 % awake) minus modem sleep
-  screen.on         screen on at minimum brightness vs off: 37
-  screen.full       OLED (Visionox VTDR6115): brightness cost depends on
-                    content. Min->max (slider 100 %, backlight 2049) was +14
-                    on the dark lock screen and +127 with colour inversion.
-                    Value is for typical mixed content (APL ~0.3); full white
-                    would be ~150-300.  ESTIMATE from measured endpoints.
-  gps.on            GPS tracking with fix vs off, 3 cycles: 21.5
-  wifi.*            connected idle +2, scanning +25, download at ~89 Mbit/s
-                    +91 after CPU; controller rx/tx scaled to the chip's own
-                    reported rx/tx airtime during that download (29 % / 13 %)
-  modem             airplane vs registered idle +2 (sleep); connected tail
-                    after a small request +10 for ~6 s (idle); LTE download at
-                    ~53 Mbit/s +126 after CPU (receive). The modem reports no
-                    TX time, so transmit = receive (not measured separately).
-  radio.active      call power = LTE active (VoLTE), not measured on a call.
-  NOT MEASURED (vendor values kept): ambient, bluetooth, audio, video, camera,
-  radio.scanning, radio.on.
+  cpu.*        per-core power per frequency (1 vs 2 busy cores, fitted a*f+b*f^3);
+               idle = awake idle minus suspend floor; suspend = overnight drain
+  screen.on    37: screen on at minimum brightness vs off
+  screen.full  65: OLED, min->max cost depends on content: +14 on the dark lock
+               screen, +127 with colour inversion (~150-300 for full white).
+               65 = mixed content (average linear brightness ~0.3).
+  gps.on       21.5: tracking with fix, 3 cycles
+  wifi         idle 2, scan 25, download +91; controller rx/tx 215 scaled to the
+               chip's own reported airtime during that download
+  modem        fitted to 5 rate-limited transfers using the modem's own
+               ModemActivityInfo counters (excess over idle rates); fit within
+               2 %: rx 32, tx L2-3 124, tx L4 148, idle 8 (tail test ~10).
+               sleep 0: idle-with-service costs only 2-4 above airplane mode,
+               already covered by the idle-time counters. TX levels 0-1 never
+               occur here (32 s since boot); given the L2-3 value (upper bound).
+  radio.scanning  27.6: manual network scan vs idle
+  audio        13.8: speaker, media volume 8/15, -12 dBFS tone (path only 8.4,
+               volume 15: 141)
+  video        11.7: 1080p H.264 hardware decode at real time
+  camera.avg   200: rear camera 1080p preview (front camera: 54)
+  camera.flashlight  87.7: torch
+  bluetooth    on, LE scan and LE advertising all within 0-3 of off (below the
+               gauge's noise): controller idle 1. RX/TX with a connected device
+               not measured (no device available) - left out rather than guessed.
+  NOT PRESENT: ambient display (always-on display does not activate on this
+  build, verified), radio.active (call power - needs a real phone call).
 -->
 <device name="Android">
     <item name="battery.capacity">10600</item>
@@ -75,34 +73,29 @@
     <item name="wifi.controller.rx">215</item>
     <item name="wifi.controller.tx">215</item>
 
-    <item name="radio.active">126</item>
+    <item name="radio.scanning">27.6</item>
 
     <modem>
-        <sleep>2</sleep>
-        <idle>10</idle>
+        <sleep>0</sleep>
+        <idle>8</idle>
         <active rat="DEFAULT">
-            <receive>126</receive>
-            <transmit level="0">126</transmit>
-            <transmit level="1">126</transmit>
-            <transmit level="2">126</transmit>
-            <transmit level="3">126</transmit>
-            <transmit level="4">126</transmit>
+            <receive>32</receive>
+            <transmit level="0">124</transmit>
+            <transmit level="1">124</transmit>
+            <transmit level="2">124</transmit>
+            <transmit level="3">124</transmit>
+            <transmit level="4">148</transmit>
         </active>
     </modem>
 
-    <!-- vendor values, not measured -->
-    <item name="ambient.on">10</item>
-    <item name="bluetooth.active">31</item>
+    <item name="audio">13.8</item>
+    <item name="video">11.7</item>
+    <item name="camera.avg">200</item>
+    <item name="camera.flashlight">87.7</item>
+
     <item name="bluetooth.on">1</item>
-    <item name="audio">13</item>
-    <item name="video">71</item>
-    <item name="camera.flashlight">160</item>
-    <item name="camera.avg">550</item>
-    <item name="radio.scanning">65</item>
-    <array name="radio.on">
-        <value>3</value>
-        <value>3</value>
-    </array>
+    <item name="bluetooth.controller.idle">1</item>
+
     <array name="memory.bandwidths">
         <value>22.7</value>
     </array>
