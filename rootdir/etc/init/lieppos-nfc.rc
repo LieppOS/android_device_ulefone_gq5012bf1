@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# ROM-FIX FIX-001 migration: relabel NFC storage that a stock ROM left as
+# system_data_file.
+# file_contexts maps /data/nfc to nfc_data_file, but init's mkdir does not
+# relabel a directory that already exists, so a dirty flash from stock keeps the
+# old label and NFA storage fails with EACCES. No-op on a correctly labelled
+# /data/nfc.
+on post-fs-data
+    restorecon_recursive /data/nfc

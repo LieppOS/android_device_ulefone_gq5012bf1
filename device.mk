@@ -282,6 +282,21 @@ ifneq ($(filter 35 36 37,$(PLATFORM_SDK_VERSION)),)
 PRODUCT_SHIPPING_API_LEVEL := 35
 endif
 
+# NFC (ST21NFC). Evidence: research hardware/nfc/ROM-FIX.md.
+# Relabel /data/nfc left as system_data_file by a stock ROM (FIX-001).
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/rootdir/etc/init/lieppos-nfc.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/lieppos-nfc.rc
+
+# Full NCI snoop + NFC/vendor HAL debug logging on userdebug only (FIX-004).
+# Full snoop keeps APDU/NDEF payloads in dumpsys nfc and bugreports. These are
+# persist.* defaults: a value set with setprop survives and wins.
+ifeq ($(TARGET_BUILD_VARIANT),userdebug)
+PRODUCT_SYSTEM_PROPERTIES += \
+    persist.nfc.snoop_log_mode=full \
+    persist.nfc.debug_enabled=true \
+    persist.nfc.vendor_debug_enabled=true
+endif
+
 # Disabled-default NFC Lab app/profile; normal NFC and firmware stay unchanged.
 $(call inherit-product, $(DEVICE_PATH)/nfc-lab/nfc-lab.mk)
 
