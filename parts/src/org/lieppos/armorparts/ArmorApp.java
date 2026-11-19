@@ -15,5 +15,6 @@ public class ArmorApp extends Application {
         LightApi.start(this);
         PowerSaveCap.start(this);
         ChargeLimit.start(this);
+        GloveMode.restore(this);
     }
 }

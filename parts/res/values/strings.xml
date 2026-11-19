@@ -13,6 +13,20 @@
     <string name="usmart_unnamed">USB device</string>
     <string name="usmart_usb_c_note">USB-C data (adb, file transfer) is paused while it is attached: both share the phone\'s USB controller.</string>
 
+    <!-- Settings > Display > Glove sensitivity -->
+    <string name="glove_mode_title">Glove sensitivity</string>
+    <string name="glove_mode_switch">Use glove sensitivity</string>
+    <string name="glove_mode_summary">Increase touch sensitivity when using gloves</string>
+    <string name="glove_mode_status">Touch driver status</string>
+    <string name="glove_mode_checking">Checking the touch controller…</string>
+    <string name="glove_mode_confirmed_on">On — reported by the touch driver</string>
+    <string name="glove_mode_confirmed_off">Off — reported by the touch driver</string>
+    <string name="glove_mode_unavailable">Could not read the touch driver state</string>
+    <string name="glove_mode_tile_unavailable">Unavailable</string>
+    <string name="glove_mode_on">On</string>
+    <string name="glove_mode_error">Could not apply the change. Check the touch controller status.</string>
+    <string name="glove_mode_note">Increases main-screen touch sensitivity for use with gloves. It may cause unintended touches, so turn it off when not needed. Your choice is restored after restart. No change is made until you choose a mode.</string>
+
     <!-- Settings > Battery > Charge limit -->
     <string name="charge_limit_title">Charge limit</string>
     <string name="charge_limit_switch">Limit charging</string>
