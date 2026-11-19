@@ -3,7 +3,10 @@
 # system_data_file.
 # file_contexts maps /data/nfc to nfc_data_file, but init's mkdir does not
 # relabel a directory that already exists, so a dirty flash from stock keeps the
-# old label and NFA storage fails with EACCES. No-op on a correctly labelled
-# /data/nfc.
+# old label and NFA storage fails with EACCES.
+# --force: without it libselinux skips the tree when the directory's
+# security.sehash matches the current file_contexts, which leaves a stale label in
+# place after a chcon or a restored backup. /data/nfc holds a few files, so the
+# cost is negligible.
 on post-fs-data
-    restorecon_recursive /data/nfc
+    restorecon_recursive --force /data/nfc
