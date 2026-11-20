@@ -14,6 +14,11 @@
     <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
     <!-- UsmartNotifier: notification while a uSmart accessory is attached. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Precision GNSS: explicit, timed location FGS; never enabled at startup. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- LightApi: keeps strobe timing running with the screen off. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -52,6 +57,40 @@
             android:name=".BlueLightTile"
             android:label="@string/tile_blue"
             android:icon="@drawable/ic_led"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".PrecisionGnssService"
+            android:foregroundServiceType="location"
+            android:exported="false" />
+        <service
+            android:name=".PrecisionGnssSettingsService"
+            android:permission="android.permission.BIND_LOCATION_PROVIDER"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.location.SettingInjectorService" />
+            </intent-filter>
+            <meta-data android:name="android.location.SettingInjectorService"
+                android:resource="@xml/precision_gnss_settings" />
+        </service>
+        <activity
+            android:name=".PrecisionGnssActivity"
+            android:label="@string/precision_gnss_title"
+            android:icon="@drawable/ic_precision_gnss"
+            android:theme="@style/ChargeLimitTheme"
+            android:excludeFromRecents="true"
+            android:exported="true" />
+        <service
+            android:name=".PrecisionGnssTile"
+            android:label="@string/precision_gnss_title"
+            android:icon="@drawable/ic_precision_gnss"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>

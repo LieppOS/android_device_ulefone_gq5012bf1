@@ -13,6 +13,26 @@
     <string name="usmart_unnamed">USB device</string>
     <string name="usmart_usb_c_note">USB-C data (adb, file transfer) is paused while it is attached: both share the phone\'s USB controller.</string>
 
+    <!-- Settings > Location > Location services > Precision GNSS -->
+    <string name="precision_gnss_title">Precision GNSS</string>
+    <string name="precision_gnss_switch">15-minute full tracking</string>
+    <string name="precision_gnss_request_status">Session request</string>
+    <string name="precision_gnss_off">Off — 15-minute sessions</string>
+    <string name="precision_gnss_active">Full tracking requested</string>
+    <string name="precision_gnss_remaining">%1$d min left — full tracking requested</string>
+    <string name="precision_gnss_stopping">Stopping the GNSS request…</string>
+    <string name="precision_gnss_expired">Off — session expired</string>
+    <string name="precision_gnss_location_off">Off — turn Location on first</string>
+    <string name="precision_gnss_permission_missing">Off — precise location permission unavailable</string>
+    <string name="precision_gnss_notifications_off">Off — allow notifications before starting</string>
+    <string name="precision_gnss_alarm_unavailable">Off — automatic expiry unavailable</string>
+    <string name="precision_gnss_unsupported">Off — GNSS measurements unavailable</string>
+    <string name="precision_gnss_failed">Could not start the bounded GNSS request</string>
+    <string name="precision_gnss_stop">Stop</string>
+    <string name="precision_gnss_notification">Full tracking requested. Stops automatically; may use more power.</string>
+    <string name="precision_gnss_channel_description">Visible status and Stop control during a timed full-tracking request</string>
+    <string name="precision_gnss_note">Requests full GNSS tracking for up to 15 minutes. This can keep the receiver active and use more power, even after leaving navigation. Supported bands may track more consistently, but improved accuracy is not guaranteed. Stop at any time using the switch, tile or notification. It stops when Location is disabled and never resumes after a reboot. No coordinates, NMEA or raw measurements are recorded.</string>
+
     <!-- Settings > Display > Glove sensitivity -->
     <string name="glove_mode_title">Glove sensitivity</string>
     <string name="glove_mode_switch">Use glove sensitivity</string>

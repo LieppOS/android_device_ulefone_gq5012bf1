@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<injected-location-setting xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/precision_gnss_title"
+    android:icon="@drawable/ic_precision_gnss"
+    android:settingsActivity="org.lieppos.armorparts.PrecisionGnssActivity"
+    android:userRestriction="no_share_location" />

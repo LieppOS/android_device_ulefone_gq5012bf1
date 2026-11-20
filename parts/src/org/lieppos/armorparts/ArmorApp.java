@@ -10,6 +10,8 @@ public class ArmorApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Cleanup only: persistent-process death can leave an AMS foreground record.
+        PrecisionGnssService.resetAfterProcessStart(this);
         ThermalGuard.start(this);
         UsmartNotifier.start(this);
         LightApi.start(this);
